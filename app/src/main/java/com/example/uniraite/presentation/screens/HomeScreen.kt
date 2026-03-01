@@ -2,7 +2,6 @@ package com.example.uniraite.presentation.screens
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -15,7 +14,7 @@ import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,11 +34,54 @@ fun HomeScreen(navController: NavController) {
     val cardBlue = Color(0xFFE3F2FD)
     val cardGreen = Color(0xFF00A669)
     val driverBannerGreen = Color(0xFFE8F5E9)
-    val notificationBlue = Color(0xFFF0F7FF)
     val footerPink = Color(0xFFFFF0F6)
+    val panicRed = Color(0xFFD32F2F)
+
+    var showPanicDialog by remember { mutableStateOf(false) }
+
+    if (showPanicDialog) {
+        AlertDialog(
+            onDismissRequest = { showPanicDialog = false },
+            title = { Text("¿Activar Botón de Pánico?", fontWeight = FontWeight.Bold, color = panicRed) },
+            text = { Text("Se enviará tu ubicación actual y una alerta a tu contacto de emergencia y a las autoridades universitarias.") },
+            confirmButton = {
+                Button(
+                    onClick = { showPanicDialog = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = panicRed)
+                ) {
+                    Text("Confirmar Emergencia", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPanicDialog = false }) {
+                    Text("Cancelar", color = Color.Gray)
+                }
+            },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
 
     Scaffold(
-        containerColor = backgroundGray
+        containerColor = backgroundGray,
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { showPanicDialog = true },
+                containerColor = panicRed,
+                contentColor = Color.White,
+                shape = CircleShape,
+                modifier = Modifier
+                    .size(56.dp)
+                    .padding(bottom = 0.dp),
+                elevation = FloatingActionButtonDefaults.elevation(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = "Botón de Pánico",
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+        }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -91,7 +133,7 @@ fun HomeScreen(navController: NavController) {
             Column(
                 modifier = Modifier
                     .padding(horizontal = 20.dp)
-                    .offset(y = 10.dp) // Cambiado de -16.dp a 10.dp para bajar el cuadro
+                    .offset(y = 10.dp)
             ) {
                 // Banner Modo Conductor
                 Surface(

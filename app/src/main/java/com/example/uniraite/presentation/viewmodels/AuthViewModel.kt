@@ -26,19 +26,25 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // NUEVO: Verifica si el correo existe para recuperar contraseña
     fun verificarCorreo(correo: String, onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
             val usuario = dao.buscarUsuarioPorCorreo(correo)
-            onResult(usuario != null) // Retorna true si lo encontró
+            onResult(usuario != null)
         }
     }
 
-    // NUEVO: Guarda la nueva contraseña
     fun cambiarContrasena(correo: String, nuevaContrasena: String, onSuccess: () -> Unit) {
         viewModelScope.launch {
             dao.actualizarContrasena(correo, nuevaContrasena)
             onSuccess()
+        }
+    }
+
+    // NUEVO: Extrae toda la información del alumno logueado usando su correo
+    fun obtenerUsuarioActual(correo: String, onResult: (Usuario?) -> Unit) {
+        viewModelScope.launch {
+            val usuario = dao.buscarUsuarioPorCorreo(correo)
+            onResult(usuario)
         }
     }
 }

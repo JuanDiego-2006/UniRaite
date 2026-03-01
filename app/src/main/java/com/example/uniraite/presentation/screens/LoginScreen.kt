@@ -18,11 +18,12 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.uniraite.presentation.viewmodels.AuthViewModel
+import com.example.uniraite.SesionActual
 
 @Composable
 fun LoginScreen(
     navController: NavController,
-    authViewModel: AuthViewModel = viewModel() // Traemos el ViewModel
+    authViewModel: AuthViewModel = viewModel()
 ) {
     val context = LocalContext.current
     var email by remember { mutableStateOf("") }
@@ -54,7 +55,6 @@ fun LoginScreen(
         )
         Spacer(modifier = Modifier.height(8.dp))
 
-        // BOTÓN: OLVIDÉ MI CONTRASEÑA
         Text(
             text = "¿Olvidaste tu contraseña?",
             color = PrimaryGreen,
@@ -67,11 +67,12 @@ fun LoginScreen(
         Button(
             onClick = {
                 if (email.isNotEmpty() && password.isNotEmpty()) {
-                    // LLAMAMOS A LA BASE DE DATOS PARA VALIDAR
                     authViewModel.loginUsuario(email, password) { loginExitoso ->
                         if (loginExitoso) {
+                            // AQUÍ GUARDAMOS EL CORREO EN MEMORIA:
+                            SesionActual.correoUsuario = email
+
                             Toast.makeText(context, "¡Bienvenido a UniRaite!", Toast.LENGTH_SHORT).show()
-                            // Si entra, lo mandamos al Home y borramos el Login del historial
                             navController.navigate("home") { popUpTo("login") { inclusive = true } }
                         } else {
                             Toast.makeText(context, "Correo o contraseña incorrectos", Toast.LENGTH_LONG).show()
