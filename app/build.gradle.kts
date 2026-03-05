@@ -55,8 +55,10 @@ dependencies {
     implementation("androidx.room:room-ktx:$room_version")
     ksp("androidx.room:room-compiler:$room_version")
 
-    // AQUÍ ESTÁ LA LIBRERÍA QUE FALTABA:
     implementation(libs.androidx.navigation.compose)
+    
+    // LIBRERÍA PARA IMÁGENES:
+    implementation(libs.coil.compose)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

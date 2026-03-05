@@ -1,6 +1,11 @@
 package com.example.uniraite.presentation.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -15,11 +20,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.uniraite.SesionActual
 import com.example.uniraite.presentation.viewmodels.AuthViewModel
 import com.example.uniraite.data.local.entities.Usuario
@@ -38,19 +47,24 @@ fun ProfileScreen(
     var mostrarPopupInfo by remember { mutableStateOf(false) }
     var mostrarPopupEmergencia by remember { mutableStateOf(false) }
 
-    // Estados para mostrar el contacto de emergencia en la UI
+    // Estados para el contacto de emergencia
     var nombreEmergencia by remember { mutableStateOf("Sin configurar") }
     var telefonoEmergencia by remember { mutableStateOf("Sin configurar") }
-
-    // Estados temporales para los campos del diálogo
     var tempNombreEmergencia by remember { mutableStateOf("") }
     var tempTelefonoEmergencia by remember { mutableStateOf("") }
 
-    // Cargar datos del usuario al iniciar
+    // Estado para la foto de perfil
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri -> selectedImageUri = uri }
+    )
+
+    // Cargar datos del usuario
     LaunchedEffect(Unit) {
         authViewModel.obtenerUsuarioActual(SesionActual.correoUsuario) { usuarioEncontrado ->
             usuarioActual = usuarioEncontrado
-            // Cargamos los datos de emergencia si ya existen en la base de datos
             usuarioEncontrado?.let {
                 nombreEmergencia = it.nombreEmergencia ?: "Sin configurar"
                 telefonoEmergencia = it.telefonoEmergencia ?: "Sin configurar"
@@ -82,11 +96,37 @@ fun ProfileScreen(
         ) {
             Spacer(modifier = Modifier.height(20.dp))
 
+            // FOTO DE PERFIL SELECCIONABLE
             Box(
-                modifier = Modifier.size(100.dp).clip(CircleShape).background(primaryColor.copy(alpha = 0.1f)),
+                modifier = Modifier
+                    .size(120.dp)
+                    .clip(CircleShape)
+                    .background(primaryColor.copy(alpha = 0.1f))
+                    .clickable {
+                        photoPickerLauncher.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                        )
+                    },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Person, null, modifier = Modifier.size(60.dp), tint = primaryColor)
+                if (selectedImageUri != null) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(selectedImageUri)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = "Foto de perfil",
+                        modifier = Modifier.fillMaxSize().clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(
+                        Icons.Default.AddAPhoto, 
+                        contentDescription = "Añadir foto", 
+                        modifier = Modifier.size(40.dp), 
+                        tint = primaryColor
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -214,7 +254,6 @@ fun ProfileScreen(
                 confirmButton = {
                     Button(
                         onClick = {
-                            // Guardamos los datos en la base de datos a través del ViewModel
                             authViewModel.guardarContactoEmergencia(
                                 SesionActual.idUsuario,
                                 tempNombreEmergencia,
