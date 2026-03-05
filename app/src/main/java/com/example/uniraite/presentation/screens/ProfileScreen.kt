@@ -8,7 +8,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.ExitToApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -39,15 +38,12 @@ fun ProfileScreen(
     var mostrarPopupInfo by remember { mutableStateOf(false) }
     var mostrarPopupEmergencia by remember { mutableStateOf(false) }
 
-    // Estados para el contacto de emergencia
     var nombreEmergencia by remember { mutableStateOf("Mamá") }
     var telefonoEmergencia by remember { mutableStateOf("961 123 4567") }
-    
-    // Estados temporales para el diálogo
+
     var tempNombreEmergencia by remember { mutableStateOf(nombreEmergencia) }
     var tempTelefonoEmergencia by remember { mutableStateOf(telefonoEmergencia) }
 
-    // Cargar datos del usuario
     LaunchedEffect(Unit) {
         authViewModel.obtenerUsuarioActual(SesionActual.correoUsuario) { usuarioEncontrado ->
             usuarioActual = usuarioEncontrado
@@ -82,7 +78,6 @@ fun ProfileScreen(
         ) {
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Foto genérica
             Box(
                 modifier = Modifier
                     .size(100.dp)
@@ -105,7 +100,7 @@ fun ProfileScreen(
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold
             )
-            
+
             Text(
                 text = "UPChiapas",
                 fontSize = 14.sp,
@@ -114,12 +109,10 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // BOTONES DE CONFIGURACIÓN
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Información Personal
                 Button(
                     onClick = { mostrarPopupInfo = true },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -138,12 +131,11 @@ fun ProfileScreen(
                     }
                 }
 
-                // Contacto de Emergencia
                 Button(
-                    onClick = { 
+                    onClick = {
                         tempNombreEmergencia = nombreEmergencia
                         tempTelefonoEmergencia = telefonoEmergencia
-                        mostrarPopupEmergencia = true 
+                        mostrarPopupEmergencia = true
                     },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color.White),
@@ -163,7 +155,6 @@ fun ProfileScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Cerrar Sesión
                 Button(
                     onClick = {
                         SesionActual.correoUsuario = ""
@@ -182,7 +173,6 @@ fun ProfileScreen(
             }
         }
 
-        // VENTANA INFORMACIÓN PERSONAL
         if (mostrarPopupInfo && usuarioActual != null) {
             AlertDialog(
                 onDismissRequest = { mostrarPopupInfo = false },
@@ -204,7 +194,6 @@ fun ProfileScreen(
             )
         }
 
-        // VENTANA CONTACTO EMERGENCIA (EDITABLE)
         if (mostrarPopupEmergencia) {
             AlertDialog(
                 onDismissRequest = { mostrarPopupEmergencia = false },
