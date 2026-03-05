@@ -19,14 +19,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.uniraite.SesionActual
+import com.example.uniraite.data.local.entities.Viaje
+import com.example.uniraite.presentation.viewmodels.ViajesViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PublishTripScreen(
-    onTripPublished: () -> Unit, // Acción al terminar
-    onBack: () -> Unit // Acción para volver atrás
+    onTripPublished: () -> Unit,
+    onBack: () -> Unit,
+    viajesViewModel: ViajesViewModel = viewModel()
 ) {
-    // Variables para el formulario
     var origen by remember { mutableStateOf("") }
     var destino by remember { mutableStateOf("UPChiapas") }
     var hora by remember { mutableStateOf("") }
@@ -40,9 +44,7 @@ fun PublishTripScreen(
             TopAppBar(
                 title = { Text("Publicar Nuevo Viaje") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Regresar")
-                    }
+                    IconButton(onClick = onBack) { Icon(Icons.Filled.ArrowBack, contentDescription = "Regresar") }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -52,92 +54,48 @@ fun PublishTripScreen(
         }
     ) { innerPadding ->
         Column(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-                .padding(16.dp),
+            modifier = Modifier.padding(innerPadding).fillMaxSize().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(
-                text = "Detalles de la Ruta",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
+            Text("Detalles de la Ruta", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
 
-            // Origen
-            OutlinedTextField(
-                value = origen,
-                onValueChange = { origen = it },
-                label = { Text("Punto de Partida (Origen)") },
-                placeholder = { Text("Ej. Parque de la Marimba") },
-                leadingIcon = { Icon(Icons.Filled.Place, contentDescription = null) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-
-            // Destino
-            OutlinedTextField(
-                value = destino,
-                onValueChange = { destino = it },
-                label = { Text("Destino") },
-                leadingIcon = { Icon(Icons.Filled.DirectionsCar, contentDescription = null) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-
-            // Hora
-            OutlinedTextField(
-                value = hora,
-                onValueChange = { hora = it },
-                label = { Text("Hora de Salida") },
-                placeholder = { Text("Ej. 07:00 AM") },
-                leadingIcon = { Icon(Icons.Filled.Schedule, contentDescription = null) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
+            OutlinedTextField(value = origen, onValueChange = { origen = it }, label = { Text("Punto de Partida") }, leadingIcon = { Icon(Icons.Filled.Place, null) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OutlinedTextField(value = destino, onValueChange = { destino = it }, label = { Text("Destino") }, leadingIcon = { Icon(Icons.Filled.DirectionsCar, null) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OutlinedTextField(value = hora, onValueChange = { hora = it }, label = { Text("Hora de Salida") }, leadingIcon = { Icon(Icons.Filled.Schedule, null) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                // Cupos
-                OutlinedTextField(
-                    value = cupos,
-                    onValueChange = { cupos = it },
-                    label = { Text("Cupos") },
-                    placeholder = { Text("4") },
-                    leadingIcon = { Icon(Icons.Filled.Group, contentDescription = null) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.weight(1f),
-                    singleLine = true
-                )
-
-                // Precio
-                OutlinedTextField(
-                    value = precio,
-                    onValueChange = { precio = it },
-                    label = { Text("Costo") },
-                    placeholder = { Text("$20") },
-                    leadingIcon = { Icon(Icons.Filled.AttachMoney, contentDescription = null) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.weight(1f),
-                    singleLine = true
-                )
+                OutlinedTextField(value = cupos, onValueChange = { cupos = it }, label = { Text("Cupos") }, leadingIcon = { Icon(Icons.Filled.Group, null) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), singleLine = true)
+                OutlinedTextField(value = precio, onValueChange = { precio = it }, label = { Text("Costo") }, leadingIcon = { Icon(Icons.Filled.AttachMoney, null) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), singleLine = true)
             }
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // Botón Publicar
             Button(
                 onClick = {
-                    if (origen.isBlank() || hora.isBlank() || cupos.isBlank()) {
-                        Toast.makeText(context, "Por favor completa los datos", Toast.LENGTH_SHORT).show()
+                    if (origen.isBlank() || hora.isBlank() || cupos.isBlank() || precio.isBlank()) {
+                        Toast.makeText(context, "Por favor completa todos los datos", Toast.LENGTH_SHORT).show()
                     } else {
-                        Toast.makeText(context, "¡Viaje Publicado Exitosamente!", Toast.LENGTH_SHORT).show()
-                        onTripPublished()
+                        val nuevoViaje = Viaje(
+                            idConductor = SesionActual.idUsuario,
+                            idVehiculo = SesionActual.idVehiculo,
+                            puntoSalida = origen,
+                            destino = destino,
+                            fechaSalida = "Hoy",
+                            horaSalida = hora,
+                            cuposTotales = cupos.toIntOrNull() ?: 4,
+                            cuposDisponibles = cupos.toIntOrNull() ?: 4,
+                            costoPorPersona = precio.toDoubleOrNull() ?: 0.0,
+                            descripcionAdicional = null,
+                            puntosIntermedios = null,
+                            estado = "ACTIVO"
+                        )
+                        viajesViewModel.publicarNuevoViaje(nuevoViaje) {
+                            Toast.makeText(context, "¡Viaje Publicado Exitosamente!", Toast.LENGTH_SHORT).show()
+                            onTripPublished()
+                        }
                     }
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
+                modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Text("Publicar Viaje", fontSize = 18.sp)

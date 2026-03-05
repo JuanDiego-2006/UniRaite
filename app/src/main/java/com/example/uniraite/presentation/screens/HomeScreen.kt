@@ -70,9 +70,7 @@ fun HomeScreen(navController: NavController) {
                 containerColor = panicRed,
                 contentColor = Color.White,
                 shape = CircleShape,
-                modifier = Modifier
-                    .size(56.dp)
-                    .padding(bottom = 0.dp),
+                modifier = Modifier.size(56.dp),
                 elevation = FloatingActionButtonDefaults.elevation(8.dp)
             ) {
                 Icon(

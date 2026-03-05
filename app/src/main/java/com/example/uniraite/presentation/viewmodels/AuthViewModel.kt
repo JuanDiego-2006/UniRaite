@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.uniraite.data.local.UniRaiteDatabase
 import com.example.uniraite.data.local.entities.Usuario
+import com.example.uniraite.data.local.entities.Vehiculo
 import kotlinx.coroutines.launch
 
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
@@ -19,10 +20,10 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun loginUsuario(correo: String, contrasena: String, onResult: (Boolean) -> Unit) {
+    fun loginUsuarioCompleto(correo: String, contrasena: String, onResult: (Usuario?) -> Unit) {
         viewModelScope.launch {
             val usuarioEncontrado = dao.login(correo, contrasena)
-            onResult(usuarioEncontrado != null)
+            onResult(usuarioEncontrado)
         }
     }
 
@@ -40,11 +41,24 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // NUEVO: Extrae toda la información del alumno logueado usando su correo
     fun obtenerUsuarioActual(correo: String, onResult: (Usuario?) -> Unit) {
         viewModelScope.launch {
             val usuario = dao.buscarUsuarioPorCorreo(correo)
             onResult(usuario)
+        }
+    }
+
+    fun registrarVehiculo(vehiculo: Vehiculo, onResult: (Long) -> Unit) {
+        viewModelScope.launch {
+            val id = dao.registrarVehiculo(vehiculo)
+            onResult(id)
+        }
+    }
+
+    fun verificarVehiculo(idUsuario: Int, onResult: (Vehiculo?) -> Unit) {
+        viewModelScope.launch {
+            val vehiculo = dao.obtenerVehiculoPorUsuario(idUsuario)
+            onResult(vehiculo)
         }
     }
 }

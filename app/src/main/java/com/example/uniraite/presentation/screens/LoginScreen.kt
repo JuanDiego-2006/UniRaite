@@ -56,9 +56,7 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "¿Olvidaste tu contraseña?",
-            color = PrimaryGreen,
-            fontWeight = FontWeight.SemiBold,
+            text = "¿Olvidaste tu contraseña?", color = PrimaryGreen, fontWeight = FontWeight.SemiBold,
             modifier = Modifier.align(Alignment.End).clickable { navController.navigate("forgot_password") }
         )
 
@@ -67,13 +65,12 @@ fun LoginScreen(
         Button(
             onClick = {
                 if (email.isNotEmpty() && password.isNotEmpty()) {
-                    authViewModel.loginUsuario(email, password) { loginExitoso ->
-                        if (loginExitoso) {
-                            // AQUÍ GUARDAMOS EL CORREO EN MEMORIA:
+                    authViewModel.loginUsuarioCompleto(email, password) { usuario ->
+                        if (usuario != null) {
                             SesionActual.correoUsuario = email
-
+                            SesionActual.idUsuario = usuario.idUsuario
                             Toast.makeText(context, "¡Bienvenido a UniRaite!", Toast.LENGTH_SHORT).show()
-                            navController.navigate("home") { popUpTo("login") { inclusive = true } }
+                            navController.navigate("role_selection") { popUpTo("login") { inclusive = true } }
                         } else {
                             Toast.makeText(context, "Correo o contraseña incorrectos", Toast.LENGTH_LONG).show()
                         }

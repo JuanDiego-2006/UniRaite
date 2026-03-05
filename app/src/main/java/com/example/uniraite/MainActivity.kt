@@ -19,43 +19,28 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
 
                 NavHost(navController = navController, startDestination = "login") {
-
-                    composable("login") {
-                        LoginScreen(navController)
-                    }
-
-                    composable("register") {
-                        RegisterScreen(navController)
-                    }
-
-                    composable("forgot_password") {
-                        ForgotPasswordScreen(navController)
-                    }
-
+                    composable("login") { LoginScreen(navController) }
+                    composable("register") { RegisterScreen(navController) }
+                    composable("forgot_password") { ForgotPasswordScreen(navController) }
                     composable("reset_password/{email}") { backStackEntry ->
                         val email = backStackEntry.arguments?.getString("email") ?: ""
                         ResetPasswordScreen(navController, email)
                     }
 
-                    composable("home") {
-                        HomeScreen(navController)
-                    }
+                    // NUEVAS RUTAS DE ROLES
+                    composable("role_selection") { RoleSelectionScreen(navController) }
+                    composable("vehicle_registration") { VehicleRegistrationScreen(navController) }
+                    composable("driver_home") { DriverHomeScreen(navController) }
 
-                    composable("search") {
-                        SearchResultsScreen(navController)
-                    }
-
+                    composable("home") { HomeScreen(navController) }
+                    composable("search") { SearchResultsScreen(navController) }
                     composable("publish") {
                         PublishTripScreen(
                             onBack = { navController.popBackStack() },
                             onTripPublished = { navController.popBackStack() }
                         )
                     }
-
-                    // ¡AQUÍ ESTÁ LA NUEVA PANTALLA DE PERFIL!
-                    composable("profile") {
-                        ProfileScreen(navController)
-                    }
+                    composable("profile") { ProfileScreen(navController) }
                 }
             }
         }

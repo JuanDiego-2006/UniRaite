@@ -1,6 +1,8 @@
 package com.example.uniraite
 
-// Memoria global para recordar el correo del usuario que inició sesión
 object SesionActual {
     var correoUsuario: String = ""
+    var rolUsuario: String = ""
+    var idUsuario: Int = 0
+    var idVehiculo: Int = 0
 }
