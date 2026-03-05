@@ -15,7 +15,7 @@ import com.example.uniraite.data.local.entities.*
         Calificacion::class,
         Reporte::class
     ],
-    version = 1,
+    version = 2, // Se cambió de 1 a 2 por la nueva estructura de Usuario
     exportSchema = false
 )
 abstract class UniRaiteDatabase : RoomDatabase() {
@@ -32,7 +32,10 @@ abstract class UniRaiteDatabase : RoomDatabase() {
                     context.applicationContext,
                     UniRaiteDatabase::class.java,
                     "uniraite_database"
-                ).build()
+                )
+                    // Permite recrear la base de datos si hay cambios de versión sin migración manual
+                    .fallbackToDestructiveMigration()
+                    .build()
                 INSTANCE = instance
                 instance
             }

@@ -1,16 +1,13 @@
 package com.example.uniraite.presentation.screens
 
+import android.app.TimePickerDialog
 import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.AttachMoney
-import androidx.compose.material.icons.filled.DirectionsCar
-import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.Place
-import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -23,6 +20,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.uniraite.SesionActual
 import com.example.uniraite.data.local.entities.Viaje
 import com.example.uniraite.presentation.viewmodels.ViajesViewModel
+import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,49 +29,127 @@ fun PublishTripScreen(
     onBack: () -> Unit,
     viajesViewModel: ViajesViewModel = viewModel()
 ) {
+    val context = LocalContext.current
+
+    // Variables del formulario
     var origen by remember { mutableStateOf("") }
-    var destino by remember { mutableStateOf("UPChiapas") }
+    var destino by remember { mutableStateOf("") }
     var hora by remember { mutableStateOf("") }
     var cupos by remember { mutableStateOf("") }
     var precio by remember { mutableStateOf("") }
 
-    val context = LocalContext.current
+    // --- LÓGICA DEL RELOJ (Time Picker) ---
+    val calendar = Calendar.getInstance()
+    val timePickerDialog = TimePickerDialog(
+        context,
+        { _, hour, minute ->
+            // Formateamos la hora para que siempre tenga dos dígitos (Ej: 07:05)
+            val formatHora = String.format("%02d:%02d", hour, minute)
+            hora = formatHora
+        },
+        calendar.get(Calendar.HOUR_OF_DAY),
+        calendar.get(Calendar.MINUTE),
+        true // true para formato 24h, false para AM/PM
+    )
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Publicar Nuevo Viaje") },
+                title = { Text("Publicar Nuevo Viaje", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.Filled.ArrowBack, contentDescription = "Regresar") }
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Filled.ArrowBack, contentDescription = "Regresar")
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
                 )
             )
         }
     ) { innerPadding ->
         Column(
-            modifier = Modifier.padding(innerPadding).fillMaxSize().padding(16.dp),
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text("Detalles de la Ruta", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            Text(
+                text = "Detalles de la Ruta",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
 
-            OutlinedTextField(value = origen, onValueChange = { origen = it }, label = { Text("Punto de Partida") }, leadingIcon = { Icon(Icons.Filled.Place, null) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(value = destino, onValueChange = { destino = it }, label = { Text("Destino") }, leadingIcon = { Icon(Icons.Filled.DirectionsCar, null) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(value = hora, onValueChange = { hora = it }, label = { Text("Hora de Salida") }, leadingIcon = { Icon(Icons.Filled.Schedule, null) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            // Origen
+            OutlinedTextField(
+                value = origen,
+                onValueChange = { origen = it },
+                label = { Text("Punto de Partida") },
+                placeholder = { Text("Ej. Parque de la Marimba") },
+                leadingIcon = { Icon(Icons.Filled.Place, null) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+
+            // Destino
+            OutlinedTextField(
+                value = destino,
+                onValueChange = { destino = it },
+                label = { Text("Destino") },
+                placeholder = { Text("Ej. UPChiapas") },
+                leadingIcon = { Icon(Icons.Filled.DirectionsCar, null) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+
+            // --- CAMPO DE HORA CON RELOJ ---
+            OutlinedTextField(
+                value = hora,
+                onValueChange = { }, // No permitimos escribir manualmente
+                label = { Text("Hora de Salida") },
+                placeholder = { Text("Selecciona la hora") },
+                leadingIcon = { Icon(Icons.Filled.Schedule, null) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { timePickerDialog.show() }, // Al tocar, abre el reloj
+                enabled = false, // Deshabilitamos el teclado
+                colors = OutlinedTextFieldDefaults.colors(
+                    disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                    disabledBorderColor = MaterialTheme.colorScheme.outline,
+                    disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    disabledLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            )
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                OutlinedTextField(value = cupos, onValueChange = { cupos = it }, label = { Text("Cupos") }, leadingIcon = { Icon(Icons.Filled.Group, null) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), singleLine = true)
-                OutlinedTextField(value = precio, onValueChange = { precio = it }, label = { Text("Costo") }, leadingIcon = { Icon(Icons.Filled.AttachMoney, null) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), singleLine = true)
+                // Cupos
+                OutlinedTextField(
+                    value = cupos,
+                    onValueChange = { cupos = it },
+                    label = { Text("Cupos") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.weight(1f)
+                )
+
+                // Precio
+                OutlinedTextField(
+                    value = precio,
+                    onValueChange = { precio = it },
+                    label = { Text("Costo") },
+                    leadingIcon = { Icon(Icons.Filled.AttachMoney, null) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.weight(1f)
+                )
             }
 
             Spacer(modifier = Modifier.weight(1f))
 
             Button(
                 onClick = {
-                    if (origen.isBlank() || hora.isBlank() || cupos.isBlank() || precio.isBlank()) {
-                        Toast.makeText(context, "Por favor completa todos los datos", Toast.LENGTH_SHORT).show()
+                    if (origen.isBlank() || destino.isBlank() || hora.isBlank() || cupos.isBlank() || precio.isBlank()) {
+                        Toast.makeText(context, "Llena todos los campos", Toast.LENGTH_SHORT).show()
                     } else {
                         val nuevoViaje = Viaje(
                             idConductor = SesionActual.idUsuario,
@@ -89,8 +165,9 @@ fun PublishTripScreen(
                             puntosIntermedios = null,
                             estado = "ACTIVO"
                         )
+
                         viajesViewModel.publicarNuevoViaje(nuevoViaje) {
-                            Toast.makeText(context, "¡Viaje Publicado Exitosamente!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "¡Viaje publicado!", Toast.LENGTH_SHORT).show()
                             onTripPublished()
                         }
                     }

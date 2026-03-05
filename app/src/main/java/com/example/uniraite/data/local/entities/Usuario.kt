@@ -12,5 +12,8 @@ data class Usuario(
     val telefono: String,
     val contrasena: String,
     val rol: String = "ESTUDIANTE",
-    val estadoValidacion: String = "PENDIENTE"
+    val estadoValidacion: String = "PENDIENTE",
+    // Campos necesarios para el contacto de emergencia
+    val nombreEmergencia: String? = null,
+    val telefonoEmergencia: String? = null
 )

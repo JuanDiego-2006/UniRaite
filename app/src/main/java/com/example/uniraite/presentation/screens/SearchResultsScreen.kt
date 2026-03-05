@@ -1,5 +1,6 @@
 package com.example.uniraite.presentation.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,11 +15,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.uniraite.SesionActual
 import com.example.uniraite.data.local.entities.Viaje
 import com.example.uniraite.presentation.viewmodels.ViajesViewModel
 
@@ -34,6 +37,7 @@ fun SearchResultsScreen(
     val cardGreen = Color(0xFF00A669)
 
     val viajesReales by viajesViewModel.viajes.collectAsState()
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         viajesViewModel.cargarViajesReales()
@@ -92,7 +96,17 @@ fun SearchResultsScreen(
                     item { Text("Aún no hay viajes publicados", color = Color.Gray, modifier = Modifier.padding(16.dp)) }
                 } else {
                     items(viajesReales) { viaje ->
-                        ViajeItemReal(viaje = viaje, primaryBlue = primaryBlue, cardGreen = cardGreen)
+                        ViajeItemReal(
+                            viaje = viaje, 
+                            primaryBlue = primaryBlue, 
+                            cardGreen = cardGreen,
+                            onReservar = {
+                                viajesViewModel.apartarLugar(viaje.idViaje, SesionActual.idUsuario) {
+                                    Toast.makeText(context, "¡Lugar reservado con éxito!", Toast.LENGTH_SHORT).show()
+                                    navController.popBackStack() // Volver al Home para ver el viaje reservado
+                                }
+                            }
+                        )
                     }
                 }
             }
@@ -101,7 +115,7 @@ fun SearchResultsScreen(
 }
 
 @Composable
-fun ViajeItemReal(viaje: Viaje, primaryBlue: Color, cardGreen: Color) {
+fun ViajeItemReal(viaje: Viaje, primaryBlue: Color, cardGreen: Color, onReservar: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
@@ -151,10 +165,12 @@ fun ViajeItemReal(viaje: Viaje, primaryBlue: Color, cardGreen: Color) {
             Spacer(Modifier.height(16.dp))
 
             Button(
-                onClick = { }, modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp), colors = ButtonDefaults.buttonColors(containerColor = primaryBlue)
+                onClick = onReservar, 
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(10.dp), 
+                colors = ButtonDefaults.buttonColors(containerColor = primaryBlue)
             ) {
-                Text("Ver Detalles", fontWeight = FontWeight.Bold)
+                Text("Apartar Lugar", fontWeight = FontWeight.Bold)
             }
         }
     }

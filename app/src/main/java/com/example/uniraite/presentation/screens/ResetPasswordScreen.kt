@@ -21,7 +21,7 @@ import com.example.uniraite.presentation.viewmodels.AuthViewModel
 @Composable
 fun ResetPasswordScreen(
     navController: NavController,
-    email: String, // Recibe el correo de la pantalla anterior
+    email: String,
     authViewModel: AuthViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -29,8 +29,12 @@ fun ResetPasswordScreen(
     val PrimaryGreen = Color(0xFF006400)
 
     Column(
-        modifier = Modifier.fillMaxSize().background(Color(0xFFF0F2F5)).padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF0F2F5))
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
         Text("Nueva Contraseña", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = PrimaryGreen)
         Spacer(modifier = Modifier.height(8.dp))
@@ -38,22 +42,27 @@ fun ResetPasswordScreen(
         Spacer(modifier = Modifier.height(32.dp))
 
         OutlinedTextField(
-            value = nuevaContrasena, onValueChange = { nuevaContrasena = it },
-            label = { Text("Escribe tu nueva contraseña") }, modifier = Modifier.fillMaxWidth(),
-            visualTransformation = PasswordVisualTransformation(), shape = RoundedCornerShape(12.dp)
+            value = nuevaContrasena,
+            onValueChange = { nuevaContrasena = it },
+            label = { Text("Escribe tu nueva contraseña") },
+            modifier = Modifier.fillMaxWidth(),
+            visualTransformation = PasswordVisualTransformation(),
+            shape = RoundedCornerShape(12.dp)
         )
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(
             onClick = {
                 if (nuevaContrasena.length >= 4) {
-                    // Guardamos en la base de datos
-                    authViewModel.cambiarContrasena(email, nuevaContrasena) {
+                    // CAMBIO AQUÍ: Usamos 'actualizarContrasena' para que coincida con el ViewModel
+                    authViewModel.actualizarContrasena(email, nuevaContrasena) {
                         Toast.makeText(context, "¡Contraseña actualizada con éxito!", Toast.LENGTH_LONG).show()
-                        navController.navigate("login") { popUpTo("login") { inclusive = true } }
+                        navController.navigate("login") {
+                            popUpTo("login") { inclusive = true }
+                        }
                     }
                 } else {
-                    Toast.makeText(context, "La contraseña debe ser más larga", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "La contraseña debe tener al menos 4 caracteres", Toast.LENGTH_SHORT).show()
                 }
             },
             modifier = Modifier.fillMaxWidth().height(50.dp),

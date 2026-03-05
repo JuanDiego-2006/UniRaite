@@ -14,7 +14,13 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     fun registrarUsuario(nombre: String, matricula: String, correo: String, telefono: String, contrasena: String, onSuccess: () -> Unit) {
         viewModelScope.launch {
-            val nuevoUsuario = Usuario(nombreCompleto = nombre, matricula = matricula, correoInstitucional = correo, telefono = telefono, contrasena = contrasena)
+            val nuevoUsuario = Usuario(
+                nombreCompleto = nombre,
+                matricula = matricula,
+                correoInstitucional = correo,
+                telefono = telefono,
+                contrasena = contrasena
+            )
             dao.insertarUsuario(nuevoUsuario)
             onSuccess()
         }
@@ -34,7 +40,8 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun cambiarContrasena(correo: String, nuevaContrasena: String, onSuccess: () -> Unit) {
+    // --- ESTA ES LA FUNCIÓN QUE SOLUCIONA TU ERROR ---
+    fun actualizarContrasena(correo: String, nuevaContrasena: String, onSuccess: () -> Unit) {
         viewModelScope.launch {
             dao.actualizarContrasena(correo, nuevaContrasena)
             onSuccess()
@@ -59,6 +66,14 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val vehiculo = dao.obtenerVehiculoPorUsuario(idUsuario)
             onResult(vehiculo)
+        }
+    }
+
+    // Agrega esto dentro de la clase AuthViewModel
+    fun guardarContactoEmergencia(idUsuario: Int, nombre: String, telefono: String, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            dao.actualizarContactoEmergencia(idUsuario, nombre, telefono)
+            onSuccess()
         }
     }
 }

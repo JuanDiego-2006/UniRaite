@@ -23,10 +23,17 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.uniraite.SesionActual
+import com.example.uniraite.data.local.entities.Viaje
+import com.example.uniraite.presentation.viewmodels.ViajesViewModel
 
 @Composable
-fun HomeScreen(navController: NavController) {
+fun HomeScreen(
+    navController: NavController,
+    viajesViewModel: ViajesViewModel = viewModel()
+) {
     val scrollState = rememberScrollState()
 
     val primaryBlue = Color(0xFF1565C0)
@@ -38,6 +45,9 @@ fun HomeScreen(navController: NavController) {
     val panicRed = Color(0xFFD32F2F)
 
     var showPanicDialog by remember { mutableStateOf(false) }
+    
+    // Cargar mis reservas reales desde la base de datos
+    val misReservas by viajesViewModel.obtenerMisReservas(SesionActual.idUsuario).collectAsState(initial = emptyList())
 
     if (showPanicDialog) {
         AlertDialog(
@@ -209,74 +219,96 @@ fun HomeScreen(navController: NavController) {
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Próximo Viaje
+                // Próximo Viaje (Dinámico ahora)
                 SectionHeader("Tu próximo viaje")
                 Spacer(modifier = Modifier.height(12.dp))
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = cardBlue.copy(alpha = 0.5f)),
-                    border = BorderStroke(1.dp, Color(0xFFBBDEFB))
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(40.dp)
-                                        .clip(CircleShape)
-                                        .background(Color.White),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(Icons.Default.DirectionsCar, contentDescription = null, tint = primaryBlue)
-                                }
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text("Maria González", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFB300), modifier = Modifier.size(14.dp))
-                                        Text(" 4.9", fontSize = 12.sp, color = Color.Gray)
+                
+                if (misReservas.isNotEmpty()) {
+                    val proximoViaje = misReservas.first()
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = cardBlue.copy(alpha = 0.5f)),
+                        border = BorderStroke(1.dp, Color(0xFFBBDEFB))
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .clip(CircleShape)
+                                            .background(Color.White),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(Icons.Default.DirectionsCar, contentDescription = null, tint = primaryBlue)
+                                    }
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column {
+                                        Text("Conductor ID: ${proximoViaje.idConductor}", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFB300), modifier = Modifier.size(14.dp))
+                                            Text(" 4.9", fontSize = 12.sp, color = Color.Gray)
+                                        }
                                     }
                                 }
+                                Surface(
+                                    color = Color(0xFF2979FF),
+                                    shape = RoundedCornerShape(4.dp)
+                                ) {
+                                    Text(
+                                        "Confirmado",
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        color = Color.White,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
-                            Surface(
-                                color = Color(0xFF2979FF),
-                                shape = RoundedCornerShape(4.dp)
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("${proximoViaje.puntoSalida} → ${proximoViaje.destino}", fontSize = 13.sp, color = Color.DarkGray)
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.AccessTime, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("${proximoViaje.fechaSalida} a las ${proximoViaje.horaSalida}", fontSize = 13.sp, color = Color.DarkGray)
+                            }
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Button(
+                                onClick = { navController.navigate("trip_details/${proximoViaje.idViaje}") },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                                shape = RoundedCornerShape(8.dp),
+                                border = BorderStroke(1.dp, Color(0xFFBBDEFB))
                             ) {
-                                Text(
-                                    "Confirmado",
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                    color = Color.White,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
+                                Text("Ver detalles del viaje", color = Color.DarkGray, fontSize = 13.sp)
                             }
                         }
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Col. Centro → UPChiapas", fontSize = 13.sp, color = Color.DarkGray)
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.AccessTime, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Mañana a las 07:00 AM", fontSize = 13.sp, color = Color.DarkGray)
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(
-                            onClick = { },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.White),
-                            shape = RoundedCornerShape(8.dp),
-                            border = BorderStroke(1.dp, Color(0xFFBBDEFB))
+                    }
+                } else {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        border = BorderStroke(1.dp, Color(0xFFEEEEEE))
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(24.dp).fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
                         ) {
-                            Text("Ver detalles del viaje", color = Color.DarkGray, fontSize = 13.sp)
+                            Icon(Icons.Default.EventNote, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(48.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text("No tienes viajes programados", fontSize = 15.sp, fontWeight = FontWeight.Medium, color = Color.Gray)
+                            Text("¡Busca un raite ahora!", fontSize = 13.sp, color = Color.LightGray)
                         }
                     }
                 }
@@ -308,23 +340,16 @@ fun HomeScreen(navController: NavController) {
                     NotificationItem(
                         icon = Icons.Outlined.Notifications,
                         iconColor = Color(0xFF4CAF50),
-                        title = "Tu viaje con Maria González está confirmado",
+                        title = "Tu viaje está confirmado",
                         time = "Hace 5 min",
                         isNew = true
                     )
                     NotificationItem(
                         icon = Icons.Default.NotificationsActive,
                         iconColor = Color(0xFFFFB300),
-                        title = "Recuerda: Viaje mañana a las 7:00 AM",
+                        title = "Recuerda: Tienes un viaje pendiente",
                         time = "Hace 1 hora",
                         isNew = true
-                    )
-                    NotificationItem(
-                        icon = Icons.Outlined.Notifications,
-                        iconColor = Color(0xFF2979FF),
-                        title = "Carlos te ha calificado con 5 estrellas",
-                        time = "Hace 2 horas",
-                        isNew = false
                     )
                 }
 
