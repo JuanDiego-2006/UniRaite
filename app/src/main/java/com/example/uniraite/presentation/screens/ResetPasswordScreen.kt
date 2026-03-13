@@ -54,13 +54,20 @@ fun ResetPasswordScreen(
         Button(
             onClick = {
                 if (nuevaContrasena.length >= 4) {
-                    // CAMBIO AQUÍ: Usamos 'actualizarContrasena' para que coincida con el ViewModel
-                    authViewModel.actualizarContrasena(email, nuevaContrasena) {
-                        Toast.makeText(context, "¡Contraseña actualizada con éxito!", Toast.LENGTH_LONG).show()
-                        navController.navigate("login") {
-                            popUpTo("login") { inclusive = true }
+                    // AQUÍ ESTÁ LA CORRECCIÓN: Se agregan onSuccess y onError
+                    authViewModel.actualizarContrasena(
+                        correo = email,
+                        nuevaContrasena = nuevaContrasena,
+                        onSuccess = {
+                            Toast.makeText(context, "¡Contraseña actualizada con éxito!", Toast.LENGTH_LONG).show()
+                            navController.navigate("login") {
+                                popUpTo("login") { inclusive = true }
+                            }
+                        },
+                        onError = {
+                            Toast.makeText(context, "Error al actualizar. Intenta de nuevo.", Toast.LENGTH_LONG).show()
                         }
-                    }
+                    )
                 } else {
                     Toast.makeText(context, "La contraseña debe tener al menos 4 caracteres", Toast.LENGTH_SHORT).show()
                 }

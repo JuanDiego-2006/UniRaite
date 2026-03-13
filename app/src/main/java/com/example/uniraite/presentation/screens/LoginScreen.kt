@@ -68,7 +68,8 @@ fun LoginScreen(
                     authViewModel.loginUsuarioCompleto(email, password) { usuario ->
                         if (usuario != null) {
                             SesionActual.correoUsuario = email
-                            SesionActual.idUsuario = usuario.idUsuario
+                            // AQUÍ ESTÁ EL ARREGLO DEL ID
+                            SesionActual.idUsuario = usuario.id?.toInt() ?: 0
                             Toast.makeText(context, "¡Bienvenido a UniRaite!", Toast.LENGTH_SHORT).show()
                             navController.navigate("role_selection") { popUpTo("login") { inclusive = true } }
                         } else {

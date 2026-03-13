@@ -55,6 +55,13 @@ dependencies {
     implementation("androidx.room:room-ktx:$room_version")
     ksp("androidx.room:room-compiler:$room_version")
 
+    // Retrofit para conectarse a la API
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    // Convertidor JSON a Kotlin (Gson)
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    // Para ver los errores de red en la consola (muy útil)
+    implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
+
     implementation(libs.androidx.navigation.compose)
     
     // LIBRERÍA PARA IMÁGENES:

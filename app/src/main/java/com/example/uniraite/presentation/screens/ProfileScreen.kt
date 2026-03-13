@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.ExitToApp
 import androidx.compose.material3.*
@@ -31,7 +32,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.uniraite.SesionActual
 import com.example.uniraite.presentation.viewmodels.AuthViewModel
-import com.example.uniraite.data.local.entities.Usuario
+import com.example.uniraite.models.Usuario
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,29 +44,34 @@ fun ProfileScreen(
     val primaryColor = if (SesionActual.rolUsuario == "CONDUCTOR") Color(0xFF2E7D32) else Color(0xFF1565C0)
     val backgroundGray = Color(0xFFF8F9FA)
 
+    // 1. ESTADO DEL USUARIO
     var usuarioActual by remember { mutableStateOf<Usuario?>(null) }
     var mostrarPopupInfo by remember { mutableStateOf(false) }
     var mostrarPopupEmergencia by remember { mutableStateOf(false) }
 
-    // Estados para el contacto de emergencia
+    // 2. AQUÍ ESTÁN LAS VARIABLES QUE FALTABAN (Esto corrige el Unresolved reference)
     var nombreEmergencia by remember { mutableStateOf("Sin configurar") }
     var telefonoEmergencia by remember { mutableStateOf("Sin configurar") }
+
+    // Variables temporales para cuando el usuario está escribiendo en el popup
     var tempNombreEmergencia by remember { mutableStateOf("") }
     var tempTelefonoEmergencia by remember { mutableStateOf("") }
 
     // Estado para la foto de perfil
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
-    
+
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
         onResult = { uri -> selectedImageUri = uri }
     )
 
-    // Cargar datos del usuario
+    // 3. CARGAR DATOS DESDE AWS
     LaunchedEffect(Unit) {
-        authViewModel.obtenerUsuarioActual(SesionActual.correoUsuario) { usuarioEncontrado ->
-            usuarioActual = usuarioEncontrado
-            usuarioEncontrado?.let {
+        val idLogueado = SesionActual.idUsuario.toLong()
+        authViewModel.obtenerUsuarioActual(idLogueado) { usuario ->
+            usuario?.let {
+                usuarioActual = it
+                // Sincronizamos las variables con la base de datos de AWS
                 nombreEmergencia = it.nombreEmergencia ?: "Sin configurar"
                 telefonoEmergencia = it.telefonoEmergencia ?: "Sin configurar"
             }
@@ -79,7 +85,7 @@ fun ProfileScreen(
                 title = { Text("Mi Perfil", fontWeight = FontWeight.Bold, color = Color.White) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Regresar", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Regresar", tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = primaryColor)
@@ -96,7 +102,7 @@ fun ProfileScreen(
         ) {
             Spacer(modifier = Modifier.height(20.dp))
 
-            // FOTO DE PERFIL SELECCIONABLE
+            // FOTO DE PERFIL
             Box(
                 modifier = Modifier
                     .size(120.dp)
@@ -109,10 +115,12 @@ fun ProfileScreen(
                     },
                 contentAlignment = Alignment.Center
             ) {
-                if (selectedImageUri != null) {
+                val imagenAMostrar = selectedImageUri ?: usuarioActual?.foto
+
+                if (imagenAMostrar != null) {
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
-                            .data(selectedImageUri)
+                            .data(imagenAMostrar)
                             .crossfade(true)
                             .build(),
                         contentDescription = "Foto de perfil",
@@ -121,9 +129,9 @@ fun ProfileScreen(
                     )
                 } else {
                     Icon(
-                        Icons.Default.AddAPhoto, 
-                        contentDescription = "Añadir foto", 
-                        modifier = Modifier.size(40.dp), 
+                        Icons.Default.AddAPhoto,
+                        contentDescription = "Añadir foto",
+                        modifier = Modifier.size(40.dp),
                         tint = primaryColor
                     )
                 }
@@ -131,13 +139,13 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
             Text(text = usuarioActual?.nombreCompleto ?: "Cargando...", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-            Text(text = "UPChiapas", fontSize = 14.sp, color = Color.Gray)
+            Text(text = usuarioActual?.carrera ?: "UPChiapas", fontSize = 14.sp, color = Color.Gray)
 
             Spacer(modifier = Modifier.height(32.dp))
 
             Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
 
-                // 1. Información Personal
+                // Botón Información Personal
                 Button(
                     onClick = { mostrarPopupInfo = true },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -153,7 +161,7 @@ fun ProfileScreen(
                     }
                 }
 
-                // 2. Contacto de Emergencia
+                // Botón Contacto de Emergencia
                 Button(
                     onClick = {
                         tempNombreEmergencia = if (nombreEmergencia == "Sin configurar") "" else nombreEmergencia
@@ -168,12 +176,15 @@ fun ProfileScreen(
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                         Icon(Icons.Default.ContactPhone, null, tint = primaryColor)
                         Spacer(modifier = Modifier.width(16.dp))
-                        Text("Contacto de Emergencia", color = Color.Black, modifier = Modifier.weight(1f))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Contacto de Emergencia", color = Color.Black, fontSize = 14.sp)
+                            Text(text = nombreEmergencia, color = Color.Gray, fontSize = 12.sp)
+                        }
                         Icon(Icons.Default.Edit, null, tint = Color.Gray)
                     }
                 }
 
-                // 3. Mi Vehículo (Solo Conductor)
+                // Botón Mi Vehículo (Solo si es conductor)
                 if (SesionActual.rolUsuario == "CONDUCTOR") {
                     Button(
                         onClick = { navController.navigate("edit_vehicle") },
@@ -193,7 +204,7 @@ fun ProfileScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // 4. Cerrar Sesión
+                // Botón Cerrar Sesión
                 Button(
                     onClick = {
                         SesionActual.correoUsuario = ""
@@ -259,6 +270,7 @@ fun ProfileScreen(
                                 tempNombreEmergencia,
                                 tempTelefonoEmergencia
                             ) {
+                                // Al guardar con éxito, actualizamos la pantalla
                                 nombreEmergencia = tempNombreEmergencia
                                 telefonoEmergencia = tempTelefonoEmergencia
                                 mostrarPopupEmergencia = false

@@ -11,6 +11,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -22,7 +25,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.uniraite.SesionActual
-import com.example.uniraite.data.local.entities.Viaje
+import com.example.uniraite.models.Viaje
 import com.example.uniraite.presentation.viewmodels.ViajesViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -36,7 +39,7 @@ fun SearchResultsScreen(
     val backgroundGray = Color(0xFFF8F9FA)
     val cardGreen = Color(0xFF00A669)
 
-    val viajesReales by viajesViewModel.viajes.collectAsState()
+    val viajesReales by viajesViewModel.viajes.collectAsState(initial = emptyList())
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
@@ -97,13 +100,14 @@ fun SearchResultsScreen(
                 } else {
                     items(viajesReales) { viaje ->
                         ViajeItemReal(
-                            viaje = viaje, 
-                            primaryBlue = primaryBlue, 
+                            viaje = viaje,
+                            primaryBlue = primaryBlue,
                             cardGreen = cardGreen,
                             onReservar = {
-                                viajesViewModel.apartarLugar(viaje.idViaje, SesionActual.idUsuario) {
+                                // AQUÍ conectamos el botón con la función de apartar
+                                viajesViewModel.apartarLugar(viaje.id ?: 0L, SesionActual.idUsuario) {
                                     Toast.makeText(context, "¡Lugar reservado con éxito!", Toast.LENGTH_SHORT).show()
-                                    navController.popBackStack() // Volver al Home para ver el viaje reservado
+                                    navController.popBackStack() // Nos regresa a la pantalla principal
                                 }
                             }
                         )
@@ -126,17 +130,17 @@ fun ViajeItemReal(viaje: Viaje, primaryBlue: Color, cardGreen: Color, onReservar
                     modifier = Modifier.size(44.dp).clip(CircleShape).background(primaryBlue.copy(alpha = 0.1f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("C${viaje.idConductor}", color = primaryBlue, fontWeight = FontWeight.Bold)
+                    Text("C", color = primaryBlue, fontWeight = FontWeight.Bold)
                 }
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Conductor #${viaje.idConductor}", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text("Conductor: ${viaje.conductorNombre ?: "Registrado"}", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Star, null, tint = Color(0xFFFFB300), modifier = Modifier.size(14.dp))
                         Text(" Nuevo", fontSize = 12.sp, color = Color.Gray)
                     }
                 }
-                Text("\$${viaje.costoPorPersona}0", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = cardGreen)
+                Text("\$${viaje.costo}0", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = cardGreen)
             }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color(0xFFF0F0F0))
@@ -158,16 +162,16 @@ fun ViajeItemReal(viaje: Viaje, primaryBlue: Color, cardGreen: Color, onReservar
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Group, null, tint = Color.Gray, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("${viaje.cuposDisponibles} disponibles", fontSize = 13.sp, color = Color.Gray)
+                    Text("${viaje.asientosDisponibles} disponibles", fontSize = 13.sp, color = Color.Gray)
                 }
             }
 
             Spacer(Modifier.height(16.dp))
 
             Button(
-                onClick = onReservar, 
+                onClick = onReservar,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp), 
+                shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = primaryBlue)
             ) {
                 Text("Apartar Lugar", fontWeight = FontWeight.Bold)

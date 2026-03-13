@@ -4,8 +4,12 @@ import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,8 +23,13 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.uniraite.SesionActual
-import com.example.uniraite.data.local.entities.Vehiculo
+import com.example.uniraite.models.Vehiculo
 import com.example.uniraite.presentation.viewmodels.AuthViewModel
+
+private val GreenPrimary = Color(0xFF00965E)
+private val BluePrimary = Color(0xFF1565C0)
+private val BackgroundGray = Color(0xFFF8F9FA)
+private val DividerColor = Color(0xFFE0E0E0)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,71 +38,138 @@ fun VehicleRegistrationScreen(
     authViewModel: AuthViewModel = viewModel()
 ) {
     val context = LocalContext.current
-    var marca by remember { mutableStateOf("") }
-    var modelo by remember { mutableStateOf("") }
-    var anio by remember { mutableStateOf("") }
-    var colorAuto by remember { mutableStateOf("") }
-    var placas by remember { mutableStateOf("") }
+    var marca    by remember { mutableStateOf("") }
+    var modelo   by remember { mutableStateOf("") }
+    var anio     by remember { mutableStateOf("") }
+    var color    by remember { mutableStateOf("") }
+    var placas   by remember { mutableStateOf("") }
     var asientos by remember { mutableStateOf("") }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Registrar Vehículo", color = Color.White, fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF2E7D32))
+                title = { Text("Registro de Vehículo", color = Color.White, fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = Color.White)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = GreenPrimary)
             )
         }
-    ) { paddingValues ->
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF8F9FA))
-                .padding(paddingValues)
-                .padding(24.dp)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .background(Color.White)
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Text("Ingresa los datos de tu auto", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray)
-            Spacer(modifier = Modifier.height(24.dp))
+            // Banner azul informativo
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(10.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFEFF6FF))
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Filled.DirectionsCar, null, tint = BluePrimary, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "Registra tu vehículo para poder publicar viajes",
+                        fontSize = 13.sp,
+                        color = BluePrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
 
-            OutlinedTextField(value = marca, onValueChange = { marca = it }, label = { Text("Marca (Ej. Nissan)") }, modifier = Modifier.fillMaxWidth())
-            Spacer(modifier = Modifier.height(12.dp))
-            OutlinedTextField(value = modelo, onValueChange = { modelo = it }, label = { Text("Modelo (Ej. Versa)") }, modifier = Modifier.fillMaxWidth())
-            Spacer(modifier = Modifier.height(12.dp))
-            OutlinedTextField(value = anio, onValueChange = { anio = it }, label = { Text("Año") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-            Spacer(modifier = Modifier.height(12.dp))
-            OutlinedTextField(value = colorAuto, onValueChange = { colorAuto = it }, label = { Text("Color") }, modifier = Modifier.fillMaxWidth())
-            Spacer(modifier = Modifier.height(12.dp))
-            OutlinedTextField(value = placas, onValueChange = { placas = it }, label = { Text("Placas") }, modifier = Modifier.fillMaxWidth())
-            Spacer(modifier = Modifier.height(12.dp))
-            OutlinedTextField(value = asientos, onValueChange = { asientos = it }, label = { Text("Asientos disponibles") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-            Spacer(modifier = Modifier.height(32.dp))
+            // Campos del formulario
+            VehicleField("Marca", marca, { marca = it }, "Ej: Toyota, Nissan...")
+            VehicleField("Modelo", modelo, { modelo = it }, "Ej: Corolla, Versa...")
 
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(Modifier.weight(1f)) {
+                    VehicleField("Año", anio, { if (it.length <= 4) anio = it }, "2022", KeyboardType.Number)
+                }
+                Column(Modifier.weight(1f)) {
+                    VehicleField("Color", color, { color = it }, "Ej: Gris, Blanco...")
+                }
+            }
+
+            VehicleField("Placas", placas, { placas = it.uppercase() }, "ABC-123-D")
+            VehicleField("Asientos disponibles", asientos, { asientos = it }, "1-4", KeyboardType.Number)
+
+            Spacer(Modifier.height(20.dp))
+
+            // Botón de Registro
             Button(
                 onClick = {
-                    if (marca.isNotEmpty() && modelo.isNotEmpty() && anio.isNotEmpty() && colorAuto.isNotEmpty() && placas.isNotEmpty() && asientos.isNotEmpty()) {
-
-                        val nuevoVehiculo = Vehiculo(
-                            idUsuario = SesionActual.idUsuario,
-                            marca = marca, modelo = modelo, anio = anio, color = colorAuto,
-                            placas = placas, numeroAsientos = asientos.toIntOrNull() ?: 4,
-                            fotoVehiculoUri = null, fotoPlacasUri = null, detallesAdicionales = null
+                    if (marca.isNotBlank() && modelo.isNotBlank() && anio.isNotBlank() && placas.isNotBlank() && asientos.isNotBlank()) {
+                        val vehiculoNube = Vehiculo(
+                            marca = marca,
+                            modelo = modelo,
+                            anio = anio,
+                            color = color,
+                            placas = placas,
+                            numeroAsientos = asientos.toIntOrNull() ?: 4,
+                            usuarioId = SesionActual.idUsuario.toLong()
                         )
 
-                        authViewModel.registrarVehiculo(nuevoVehiculo) { idGenerado ->
-                            SesionActual.idVehiculo = idGenerado.toInt()
-                            Toast.makeText(context, "Vehículo registrado correctamente", Toast.LENGTH_SHORT).show()
-                            navController.navigate("driver_home") { popUpTo("role_selection") { inclusive = true } }
-                        }
+                        authViewModel.registrarVehiculo(
+                            vehiculo = vehiculoNube,
+                            onSuccess = {
+                                Toast.makeText(context, "¡Vehículo registrado con éxito!", Toast.LENGTH_SHORT).show()
+                                navController.navigate("driver_home") {
+                                    popUpTo("vehicle_registration") { inclusive = true }
+                                }
+                            },
+                            onError = { Toast.makeText(context, it, Toast.LENGTH_LONG).show() }
+                        )
                     } else {
-                        Toast.makeText(context, "Llena todos los campos", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Por favor llena todos los campos", Toast.LENGTH_SHORT).show()
                     }
                 },
-                modifier = Modifier.fillMaxWidth().height(50.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = GreenPrimary)
             ) {
-                Text("Guardar y Entrar", fontSize = 18.sp, color = Color.White)
+                Text("Completar Registro", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
         }
+    }
+}
+
+@Composable
+private fun VehicleField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    keyboardType: KeyboardType = KeyboardType.Text
+) {
+    Column {
+        Text(label, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color.Black)
+        Spacer(Modifier.height(4.dp))
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            placeholder = { Text(placeholder, fontSize = 13.sp) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(10.dp),
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = GreenPrimary,
+                unfocusedBorderColor = DividerColor,
+                unfocusedContainerColor = BackgroundGray
+            )
+        )
     }
 }

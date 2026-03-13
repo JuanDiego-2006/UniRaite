@@ -15,6 +15,9 @@ import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,8 +28,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.example.uniraite.SesionActual
-import com.example.uniraite.data.local.entities.Viaje
 import com.example.uniraite.presentation.viewmodels.ViajesViewModel
 
 @Composable
@@ -45,9 +46,9 @@ fun HomeScreen(
     val panicRed = Color(0xFFD32F2F)
 
     var showPanicDialog by remember { mutableStateOf(false) }
-    
-    // Cargar mis reservas reales desde la base de datos
-    val misReservas by viajesViewModel.obtenerMisReservas(SesionActual.idUsuario).collectAsState(initial = emptyList())
+
+    // Observamos la lista de reservas confirmadas
+    val misReservas by viajesViewModel.misReservas.collectAsState()
 
     if (showPanicDialog) {
         AlertDialog(
@@ -97,7 +98,6 @@ fun HomeScreen(
                 .padding(paddingValues)
                 .verticalScroll(scrollState)
         ) {
-            // Header Azul
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -143,7 +143,6 @@ fun HomeScreen(
                     .padding(horizontal = 20.dp)
                     .offset(y = 10.dp)
             ) {
-                // Banner Modo Conductor
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -178,7 +177,6 @@ fun HomeScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Card Buscar Viaje
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
@@ -203,7 +201,7 @@ fun HomeScreen(
                         }
                         Spacer(modifier = Modifier.height(20.dp))
                         Button(
-                            onClick = { navController.navigate("search") },
+                            onClick = { navController.navigate("search_results") },
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                             shape = RoundedCornerShape(8.dp)
@@ -219,10 +217,10 @@ fun HomeScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Próximo Viaje (Dinámico ahora)
                 SectionHeader("Tu próximo viaje")
                 Spacer(modifier = Modifier.height(12.dp))
-                
+
+                // AQUÍ ESTÁ LA LÓGICA DE FILTRADO
                 if (misReservas.isNotEmpty()) {
                     val proximoViaje = misReservas.first()
                     Card(
@@ -249,7 +247,7 @@ fun HomeScreen(
                                     }
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Column {
-                                        Text("Conductor ID: ${proximoViaje.idConductor}", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                        Text("Conductor: ${proximoViaje.conductorNombre ?: "Registrado"}", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFB300), modifier = Modifier.size(14.dp))
                                             Text(" 4.9", fontSize = 12.sp, color = Color.Gray)
@@ -279,11 +277,11 @@ fun HomeScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.AccessTime, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("${proximoViaje.fechaSalida} a las ${proximoViaje.horaSalida}", fontSize = 13.sp, color = Color.DarkGray)
+                                Text("Hoy a las ${proximoViaje.horaSalida}", fontSize = 13.sp, color = Color.DarkGray)
                             }
                             Spacer(modifier = Modifier.height(16.dp))
                             Button(
-                                onClick = { navController.navigate("trip_details/${proximoViaje.idViaje}") },
+                                onClick = { navController.navigate("trip_details/${proximoViaje.id ?: 0L}") },
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                                 shape = RoundedCornerShape(8.dp),
@@ -307,15 +305,14 @@ fun HomeScreen(
                         ) {
                             Icon(Icons.Default.EventNote, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(48.dp))
                             Spacer(modifier = Modifier.height(12.dp))
-                            Text("No tienes viajes programados", fontSize = 15.sp, fontWeight = FontWeight.Medium, color = Color.Gray)
-                            Text("¡Busca un raite ahora!", fontSize = 13.sp, color = Color.LightGray)
+                            Text("No has apartado ningún lugar", fontSize = 15.sp, fontWeight = FontWeight.Medium, color = Color.Gray)
+                            Text("Los viajes que confirmes aparecerán aquí", fontSize = 13.sp, color = Color.LightGray)
                         }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Notificaciones
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -327,7 +324,7 @@ fun HomeScreen(
                         shape = RoundedCornerShape(4.dp)
                     ) {
                         Text(
-                            "2 nuevas",
+                            "0 nuevas",
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                             color = Color(0xFFD32F2F),
                             fontSize = 10.sp,
@@ -337,25 +334,11 @@ fun HomeScreen(
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    NotificationItem(
-                        icon = Icons.Outlined.Notifications,
-                        iconColor = Color(0xFF4CAF50),
-                        title = "Tu viaje está confirmado",
-                        time = "Hace 5 min",
-                        isNew = true
-                    )
-                    NotificationItem(
-                        icon = Icons.Default.NotificationsActive,
-                        iconColor = Color(0xFFFFB300),
-                        title = "Recuerda: Tienes un viaje pendiente",
-                        time = "Hace 1 hora",
-                        isNew = true
-                    )
+                    // Notificaciones por defecto
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Historial y Perfil
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     QuickActionCard(
                         modifier = Modifier.weight(1f),
@@ -377,7 +360,6 @@ fun HomeScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Footer Banner Conductor
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -407,7 +389,7 @@ fun HomeScreen(
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Button(
-                                onClick = { },
+                                onClick = { navController.navigate("vehicle_registration") },
                                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                                 modifier = Modifier.height(32.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = Color.White),

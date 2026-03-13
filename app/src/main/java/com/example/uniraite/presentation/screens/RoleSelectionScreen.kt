@@ -5,9 +5,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DirectionsCar
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -26,45 +26,85 @@ fun RoleSelectionScreen(
 ) {
     val PrimaryBlue = Color(0xFF1565C0)
     val PrimaryGreen = Color(0xFF2E7D32)
+    val BackgroundGray = Color(0xFFF8F9FA)
 
     Column(
-        modifier = Modifier.fillMaxSize().background(Color(0xFFF8F9FA)).padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BackgroundGray)
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        Text("¿Cómo usarás UniRaite hoy?", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray)
-        Spacer(modifier = Modifier.height(40.dp))
+        Text(
+            text = "¿Cómo usarás UniRaite hoy?",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.Black
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Selecciona tu modo de viaje",
+            fontSize = 16.sp,
+            color = Color.Gray
+        )
+        Spacer(modifier = Modifier.height(48.dp))
 
+        // Botón Estudiante (Pasajero)
         Button(
             onClick = {
                 SesionActual.rolUsuario = "ESTUDIANTE"
-                navController.navigate("home") { popUpTo("role_selection") { inclusive = true } }
+                navController.navigate("home") {
+                    popUpTo("role_selection") { inclusive = true }
+                }
             },
-            modifier = Modifier.fillMaxWidth().height(80.dp), colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue), shape = RoundedCornerShape(16.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(80.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
         ) {
-            Icon(Icons.Default.Person, contentDescription = "Estudiante", modifier = Modifier.size(32.dp), tint = Color.White)
-            Spacer(modifier = Modifier.width(16.dp))
-            Text("Soy Estudiante\n(Buscar Raites)", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(Icons.Default.School, contentDescription = null, modifier = Modifier.size(32.dp))
+                Spacer(modifier = Modifier.width(16.dp))
+                Text("Soy Pasajero", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
+        // Botón Conductor
         Button(
             onClick = {
                 SesionActual.rolUsuario = "CONDUCTOR"
+                // AQUÍ ESTÁ LA CORRECCIÓN: Verifica si tiene vehículo antes de dejarlo pasar
                 authViewModel.verificarVehiculo(SesionActual.idUsuario) { vehiculo ->
                     if (vehiculo != null) {
-                        SesionActual.idVehiculo = vehiculo.idVehiculo
-                        navController.navigate("driver_home")
+                        navController.navigate("driver_home") {
+                            popUpTo("role_selection") { inclusive = true }
+                        }
                     } else {
                         navController.navigate("vehicle_registration")
                     }
                 }
             },
-            modifier = Modifier.fillMaxWidth().height(80.dp), colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen), shape = RoundedCornerShape(16.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(80.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
         ) {
-            Icon(Icons.Default.DirectionsCar, contentDescription = "Conductor", modifier = Modifier.size(32.dp), tint = Color.White)
-            Spacer(modifier = Modifier.width(16.dp))
-            Text("Soy Conductor\n(Ofrecer Raites)", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(Icons.Default.DirectionsCar, contentDescription = null, modifier = Modifier.size(32.dp))
+                Spacer(modifier = Modifier.width(16.dp))
+                Text("Soy Conductor", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            }
         }
     }
 }

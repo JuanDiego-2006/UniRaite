@@ -8,7 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.* // IMPORTANTE: Corrige los errores de getValue/setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -16,10 +16,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.uniraite.presentation.viewmodels.ViajesViewModel
 import androidx.navigation.NavController
 import com.example.uniraite.SesionActual
-import com.example.uniraite.data.local.entities.Viaje
-import com.example.uniraite.presentation.viewmodels.ViajesViewModel
+import com.example.uniraite.models.Viaje
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,23 +27,30 @@ fun DriverHomeScreen(
     navController: NavController,
     viajesViewModel: ViajesViewModel = viewModel()
 ) {
-    val PrimaryGreen = Color(0xFF2E7D32)
-    val BackgroundGray = Color(0xFFF8F9FA)
+    val primaryGreen = Color(0xFF2E7D32)
+    val backgroundGray = Color(0xFFF8F9FA)
 
-    // Ahora sí reconocerá la función y el collectAsState
-    val misViajes by viajesViewModel.obtenerViajesPorConductor(SesionActual.idUsuario).collectAsState(initial = emptyList())
+    // CORRECCIÓN: Observamos la variable de estado segura
+    val misViajes by viajesViewModel.misViajes.collectAsState()
+
+    // CORRECCIÓN: Llamamos a la API una sola vez cuando se abre la pantalla
+    LaunchedEffect(Unit) {
+        if (SesionActual.idUsuario != 0) {
+            viajesViewModel.cargarViajesPorConductor(SesionActual.idUsuario.toLong())
+        }
+    }
 
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("Mis Viajes Publicados", color = Color.White, fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = PrimaryGreen)
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = primaryGreen)
             )
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = { navController.navigate("publish") },
-                containerColor = PrimaryGreen,
+                onClick = { navController.navigate("publish_trip") }, // Corrección de la ruta a publish_trip
+                containerColor = primaryGreen,
                 contentColor = Color.White,
                 icon = { Icon(Icons.Default.Add, contentDescription = null) },
                 text = { Text("Publicar Viaje") }
@@ -69,7 +76,7 @@ fun DriverHomeScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(BackgroundGray)
+                .background(backgroundGray)
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
@@ -113,7 +120,7 @@ fun CardViajeConductor(viaje: Viaje) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(text = "Destino: ${viaje.destino}", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color(0xFF2E7D32))
-                Text(text = "$${viaje.costoPorPersona}0", fontWeight = FontWeight.ExtraBold, color = Color.Black)
+                Text(text = "$${viaje.costo}0", fontWeight = FontWeight.ExtraBold, color = Color.Black)
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -135,7 +142,7 @@ fun CardViajeConductor(viaje: Viaje) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Group, null, tint = Color(0xFF2E7D32), modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text(text = "Cupos: ${viaje.cuposDisponibles}/${viaje.cuposTotales}", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                Text(text = "Cupos: ${viaje.asientosDisponibles}", fontSize = 14.sp, fontWeight = FontWeight.Medium)
             }
         }
     }
