@@ -173,6 +173,14 @@ fun PublishTripScreen(
                         Toast.makeText(context, "No puedes publicar un viaje en el pasado", Toast.LENGTH_LONG).show()
                     } else if (SesionActual.idUsuario == 0) {
                         Toast.makeText(context, "Error: Inicia sesión de nuevo", Toast.LENGTH_LONG).show()
+
+                        // --- AQUÍ ESTÁ LA LÓGICA CORREGIDA QUE PEDISTE ---
+                    } else if (cuposNum > maxCupos) {
+                        Toast.makeText(context, "Tu vehículo solo tiene capacidad para $maxCupos pasajeros", Toast.LENGTH_LONG).show()
+                    } else if (cuposNum <= 0) {
+                        Toast.makeText(context, "Debe haber al menos 1 asiento disponible", Toast.LENGTH_SHORT).show()
+                        // --------------------------------------------------
+
                     } else {
                         val viajeNube = Viaje(
                             puntoSalida = puntoDeSalida,

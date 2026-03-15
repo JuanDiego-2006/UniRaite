@@ -38,7 +38,6 @@ class ViajesViewModel(application: Application) : AndroidViewModel(application) 
                 if (response.isSuccessful) {
                     val todosLosViajes = response.body() ?: emptyList()
 
-                    // CORRECCIÓN: Usar Locale.US para que entienda "AM/PM" perfectamente
                     val formato = SimpleDateFormat("dd/MM/yyyy hh:mm a", Locale.US)
                     val ahora = Calendar.getInstance().time
 
@@ -47,11 +46,9 @@ class ViajesViewModel(application: Application) : AndroidViewModel(application) 
                             val fechaViaje = formato.parse(viaje.horaSalida)
                             fechaViaje?.after(ahora) == true
                         } catch (e: Exception) {
-                            // Cambiamos a true para que, si hay un viaje con formato viejo, no desaparezca
                             true
                         }
                     }
-
                     _viajes.value = viajesVigentes
                 }
             } catch (e: Exception) {
@@ -101,6 +98,40 @@ class ViajesViewModel(application: Application) : AndroidViewModel(application) 
                 }
             }
             onSuccess()
+        }
+    }
+
+    fun eliminarViaje(idViaje: Long, idConductor: Long, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            try {
+                val response = apiService.eliminarViaje(idViaje)
+                if (response.isSuccessful) {
+                    // CORRECCIÓN: Borrar el viaje de las reservas activas (Tu próximo viaje) al instante
+                    _misReservas.value = _misReservas.value.filter { it.id != idViaje }
+                    _viajes.value = _viajes.value.filter { it.id != idViaje }
+
+                    cargarViajesPorConductor(idConductor)
+                    cargarViajesReales()
+                    onSuccess()
+                }
+            } catch (e: Exception) {
+                Log.e("ViajesViewModel", "Error al eliminar", e)
+            }
+        }
+    }
+
+    fun editarViaje(idViaje: Long, viajeEditado: Viaje, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            try {
+                val response = apiService.editarViaje(idViaje, viajeEditado)
+                if (response.isSuccessful) {
+                    cargarViajesPorConductor(viajeEditado.conductorId)
+                    cargarViajesReales()
+                    onSuccess()
+                }
+            } catch (e: Exception) {
+                Log.e("ViajesViewModel", "Error al editar", e)
+            }
         }
     }
 }

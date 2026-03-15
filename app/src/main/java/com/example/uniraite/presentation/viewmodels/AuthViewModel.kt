@@ -8,6 +8,7 @@ import com.example.uniraite.models.Usuario
 import com.example.uniraite.models.Vehiculo
 import com.example.uniraite.api.ApiService
 import com.example.uniraite.api.RetrofitClient
+import com.example.uniraite.SesionActual
 import kotlinx.coroutines.launch
 
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
@@ -35,8 +36,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             try {
                 val loginData = Usuario(
-                    nombreCompleto = "", matricula = "", correoInstitucional = correo,
-                    telefono = "", contrasena = contrasena
+                    nombreCompleto = "", correoInstitucional = correo, contrasena = contrasena
                 )
                 val response = apiService.loginUsuario(loginData)
                 if (response.isSuccessful) {
@@ -57,52 +57,33 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 if (response.isSuccessful) {
                     onSuccess()
                 } else {
-                    Log.e("AuthViewModel", "Servidor rechazó el cambio: ${response.code()}")
                     onError()
                 }
             } catch (e: Exception) {
-                Log.e("AuthViewModel", "Fallo al conectar para recuperar contraseña", e)
                 onError()
             }
         }
     }
 
-    fun verificarCorreo(correo: String, onResult: (Boolean) -> Unit) {
-        onResult(true)
-    }
-
-    fun obtenerUsuarioActual(id: Long, onResult: (Usuario?) -> Unit) {
+    fun actualizarPerfil(usuarioEditado: Usuario, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
-                val response = apiService.obtenerPerfil(id)
-                if (response.isSuccessful) {
-                    onResult(response.body())
-                } else {
-                    Log.e("AuthViewModel", "Error al obtener perfil: ${response.code()}")
-                    onResult(null)
-                }
-            } catch (e: Exception) {
-                Log.e("AuthViewModel", "Error de red en perfil", e)
-                onResult(null)
-            }
-        }
-    }
+                val idUsuario = usuarioEditado.id ?: SesionActual.idUsuario.toLong()
+                val response = apiService.actualizarUsuario(idUsuario, usuarioEditado)
 
-    fun guardarContactoEmergencia(idUsuario: Int, nombre: String, telefono: String, onSuccess: () -> Unit) {
-        viewModelScope.launch {
-            try {
-                val response = apiService.actualizarContactoEmergencia(
-                    id = idUsuario.toLong(),
-                    nombreContacto = nombre,
-                    telefonoContacto = telefono
-                )
                 if (response.isSuccessful) {
+                    val userActualizado = response.body()
+                    if (userActualizado != null) {
+                        SesionActual.nombreUsuario = userActualizado.nombreCompleto
+                        SesionActual.carrera = userActualizado.carrera ?: ""
+                        SesionActual.fotoPerfilUrl = userActualizado.foto ?: ""
+                    }
                     onSuccess()
                 } else {
-                    Log.e("AuthViewModel", "Error del servidor al guardar contacto: ${response.code()}")
+                    onError("Error al actualizar: ${response.code()}")
                 }
             } catch (e: Exception) {
-                Log.e("AuthViewModel", "Fallo de conexión al guardar contacto", e)
+                onError("No se pudo conectar con el servidor.")
             }
         }
     }
@@ -111,22 +92,14 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             try {
                 val response = apiService.obtenerVehiculoPorUsuario(idUsuario.toLong())
-                if (response.isSuccessful) {
-                    onResult(response.body())
-                } else {
-                    onResult(null)
-                }
+                if (response.isSuccessful) onResult(response.body()) else onResult(null)
             } catch (e: Exception) {
                 onResult(null)
             }
         }
     }
 
-    fun registrarVehiculo(
-        vehiculo: Vehiculo,
-        onSuccess: (Long) -> Unit,
-        onError: (String) -> Unit
-    ) {
+    fun registrarVehiculo(vehiculo: Vehiculo, onSuccess: (Long) -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
                 val response = apiService.registrarVehiculo(vehiculo)
@@ -137,6 +110,37 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 }
             } catch (e: Exception) {
                 onError("Sin conexión al servidor")
+            }
+        }
+    }
+
+    // --- FUNCIONES AGREGADAS PARA EL PERFIL Y CONTACTO DE EMERGENCIA ---
+    fun obtenerUsuarioActual(id: Long, onResult: (Usuario?) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val response = apiService.obtenerPerfil(id)
+                if (response.isSuccessful) {
+                    onResult(response.body())
+                } else {
+                    onResult(null)
+                }
+            } catch (e: Exception) {
+                onResult(null)
+            }
+        }
+    }
+
+    fun guardarContactoEmergencia(idUsuario: Long, nombre: String, telefono: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val response = apiService.actualizarContactoEmergencia(idUsuario, nombre, telefono)
+                if (response.isSuccessful) {
+                    onSuccess()
+                } else {
+                    onError("Error del servidor: ${response.code()}")
+                }
+            } catch (e: Exception) {
+                onError("Fallo de conexión al guardar contacto")
             }
         }
     }

@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-// IMPORTACIÓN CLAVE PARA EL VIEWMODEL COMPARTIDO
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -29,8 +28,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     val navController = rememberNavController()
 
-                    // ✨ LA MAGIA ESTÁ AQUÍ ✨
-                    // Creamos el ViewModel una sola vez para que sea el "Cerebro Central"
+                    // ViewModel compartido para que todas las pantallas vean los mismos datos
                     val viajesViewModelCompartido: ViajesViewModel = viewModel()
 
                     NavHost(
@@ -46,24 +44,19 @@ class MainActivity : ComponentActivity() {
                             VehicleRegistrationScreen(navController = navController)
                         }
 
-                        // Le pasamos el cerebro central al conductor
                         composable("driver_home") { DriverHomeScreen(navController, viajesViewModelCompartido) }
                         composable("edit_vehicle") { EditVehicleScreen(navController) }
 
+                        // 🔥 AQUÍ ESTÁ LA CORRECCIÓN 🔥
+                        // Usamos onBack y onPublishSuccess para respetar tu diseño original
                         composable("publish_trip") {
                             PublishTripScreen(
                                 onBack = { navController.popBackStack() },
-                                onPublishSuccess = {
-                                    navController.navigate("driver_home") {
-                                        popUpTo("publish_trip") { inclusive = true }
-                                    }
-                                },
-                                viajesViewModel = viajesViewModelCompartido // <-- Compartido
+                                onPublishSuccess = { navController.popBackStack() },
+                                viajesViewModel = viajesViewModelCompartido
                             )
                         }
 
-                        // 🔥 AQUÍ ARREGLAMOS TU ERROR 🔥
-                        // Ambas pantallas usan ahora el mismo "bloc de notas"
                         composable("home") { HomeScreen(navController, viajesViewModelCompartido) }
                         composable("search_results") { SearchResultsScreen(navController, viajesViewModelCompartido) }
 

@@ -1,20 +1,18 @@
 package com.example.uniraite.presentation.screens
 
-import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.ExitToApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,10 +27,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.example.uniraite.SesionActual
-import com.example.uniraite.presentation.viewmodels.AuthViewModel
 import com.example.uniraite.models.Usuario
+import com.example.uniraite.presentation.viewmodels.AuthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,249 +37,247 @@ fun ProfileScreen(
     navController: NavController,
     authViewModel: AuthViewModel = viewModel()
 ) {
-    val scrollState = rememberScrollState()
-    val primaryColor = if (SesionActual.rolUsuario == "CONDUCTOR") Color(0xFF2E7D32) else Color(0xFF1565C0)
-    val backgroundGray = Color(0xFFF8F9FA)
+    val context = LocalContext.current
+    val primaryColor = Color(0xFF1565C0)
+    val redColor = Color(0xFFD32F2F)
 
-    // 1. ESTADO DEL USUARIO
-    var usuarioActual by remember { mutableStateOf<Usuario?>(null) }
-    var mostrarPopupInfo by remember { mutableStateOf(false) }
-    var mostrarPopupEmergencia by remember { mutableStateOf(false) }
+    var isEditing by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
+    var showEmergencyDialog by remember { mutableStateOf(false) }
 
-    // 2. AQUÍ ESTÁN LAS VARIABLES QUE FALTABAN (Esto corrige el Unresolved reference)
-    var nombreEmergencia by remember { mutableStateOf("Sin configurar") }
-    var telefonoEmergencia by remember { mutableStateOf("Sin configurar") }
+    // Estados del perfil
+    var nombre by remember { mutableStateOf(SesionActual.nombreUsuario) }
+    var carrera by remember { mutableStateOf(SesionActual.carrera) }
+    var fotoUri by remember { mutableStateOf(SesionActual.fotoPerfilUrl) }
 
-    // Variables temporales para cuando el usuario está escribiendo en el popup
-    var tempNombreEmergencia by remember { mutableStateOf("") }
-    var tempTelefonoEmergencia by remember { mutableStateOf("") }
+    // Estados del contacto de emergencia
+    var nombreEmergencia by remember { mutableStateOf("") }
+    var telefonoEmergencia by remember { mutableStateOf("") }
 
-    // Estado para la foto de perfil
-    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
-
-    val photoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia(),
-        onResult = { uri -> selectedImageUri = uri }
-    )
-
-    // 3. CARGAR DATOS DESDE AWS
+    // Al abrir la pantalla, jalamos la información desde la base de datos remota
     LaunchedEffect(Unit) {
-        val idLogueado = SesionActual.idUsuario.toLong()
-        authViewModel.obtenerUsuarioActual(idLogueado) { usuario ->
-            usuario?.let {
-                usuarioActual = it
-                // Sincronizamos las variables con la base de datos de AWS
-                nombreEmergencia = it.nombreEmergencia ?: "Sin configurar"
-                telefonoEmergencia = it.telefonoEmergencia ?: "Sin configurar"
+        authViewModel.obtenerUsuarioActual(SesionActual.idUsuario.toLong()) { usuario ->
+            if (usuario != null) {
+                nombre = usuario.nombreCompleto
+                carrera = usuario.carrera ?: ""
+                fotoUri = usuario.foto ?: ""
+                nombreEmergencia = usuario.nombreEmergencia ?: ""
+                telefonoEmergencia = usuario.telefonoEmergencia ?: ""
+
+                // Actualizamos sesión local por si acaso
+                SesionActual.nombreUsuario = usuario.nombreCompleto
+                SesionActual.carrera = usuario.carrera ?: ""
+                SesionActual.fotoPerfilUrl = usuario.foto ?: ""
             }
         }
     }
 
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri -> if (uri != null) fotoUri = uri.toString() }
+    )
+
+    // Diálogo de Contacto de Emergencia
+    if (showEmergencyDialog) {
+        AlertDialog(
+            onDismissRequest = { showEmergencyDialog = false },
+            title = { Text("Contacto de Emergencia", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text("Esta persona será contactada en caso de un incidente.", color = Color.Gray, fontSize = 13.sp)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = nombreEmergencia,
+                        onValueChange = { nombreEmergencia = it },
+                        label = { Text("Nombre Completo") },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.Black,
+                            unfocusedTextColor = Color.Black
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = telefonoEmergencia,
+                        onValueChange = { telefonoEmergencia = it },
+                        label = { Text("Teléfono") },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.Black,
+                            unfocusedTextColor = Color.Black
+                        )
+                    )
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    authViewModel.guardarContactoEmergencia(
+                        idUsuario = SesionActual.idUsuario.toLong(),
+                        nombre = nombreEmergencia,
+                        telefono = telefonoEmergencia,
+                        onSuccess = {
+                            Toast.makeText(context, "Contacto de emergencia guardado", Toast.LENGTH_SHORT).show()
+                            showEmergencyDialog = false
+                        },
+                        onError = { error ->
+                            Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+                        }
+                    )
+                }, colors = ButtonDefaults.buttonColors(containerColor = primaryColor)) {
+                    Text("Guardar", color = Color.White)
+                }
+            },
+            dismissButton = { TextButton(onClick = { showEmergencyDialog = false }) { Text("Cancelar") } }
+        )
+    }
+
     Scaffold(
-        containerColor = backgroundGray,
         topBar = {
             TopAppBar(
-                title = { Text("Mi Perfil", fontWeight = FontWeight.Bold, color = Color.White) },
+                title = { Text("Mi Perfil", color = Color.White, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Regresar", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Regresar", tint = Color.White)
+                    }
+                },
+                actions = {
+                    // Botón de Contacto de Emergencia
+                    IconButton(onClick = { showEmergencyDialog = true }) {
+                        Icon(Icons.Default.Warning, "Contacto de Emergencia", tint = Color.White)
+                    }
+                    if (!isEditing) {
+                        IconButton(onClick = { isEditing = true }) {
+                            Icon(Icons.Default.Edit, "Editar", tint = Color.White)
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = primaryColor)
             )
         }
-    ) { paddingValues ->
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(scrollState)
-                .padding(20.dp),
+                .padding(padding)
+                .background(Color.White)
+                .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // FOTO DE PERFIL
             Box(
-                modifier = Modifier
-                    .size(120.dp)
-                    .clip(CircleShape)
-                    .background(primaryColor.copy(alpha = 0.1f))
-                    .clickable {
-                        photoPickerLauncher.launch(
-                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                        )
-                    },
-                contentAlignment = Alignment.Center
+                modifier = Modifier.size(120.dp).clickable(enabled = isEditing) {
+                    photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                },
+                contentAlignment = Alignment.BottomEnd
             ) {
-                val imagenAMostrar = selectedImageUri ?: usuarioActual?.foto
-
-                if (imagenAMostrar != null) {
+                if (fotoUri.isNotEmpty()) {
                     AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(imagenAMostrar)
-                            .crossfade(true)
-                            .build(),
-                        contentDescription = "Foto de perfil",
-                        modifier = Modifier.fillMaxSize().clip(CircleShape),
-                        contentScale = ContentScale.Crop
+                        model = fotoUri,
+                        contentDescription = "Foto",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize().clip(CircleShape).border(3.dp, primaryColor, CircleShape)
                     )
                 } else {
-                    Icon(
-                        Icons.Default.AddAPhoto,
-                        contentDescription = "Añadir foto",
-                        modifier = Modifier.size(40.dp),
-                        tint = primaryColor
-                    )
+                    Box(modifier = Modifier.fillMaxSize().clip(CircleShape).background(Color.LightGray).border(3.dp, primaryColor, CircleShape), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.Person, null, tint = Color.White, modifier = Modifier.size(60.dp))
+                    }
+                }
+                if (isEditing) {
+                    Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(primaryColor).border(2.dp, Color.White, CircleShape), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.CameraAlt, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(text = usuarioActual?.nombreCompleto ?: "Cargando...", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-            Text(text = usuarioActual?.carrera ?: "UPChiapas", fontSize = 14.sp, color = Color.Gray)
+            Spacer(Modifier.height(32.dp))
 
-            Spacer(modifier = Modifier.height(32.dp))
+            // Se cambia enabled = isEditing por readOnly = !isEditing para que el color no se ponga gris/invisible
+            OutlinedTextField(
+                value = nombre,
+                onValueChange = { nombre = it },
+                label = { Text("Nombre Completo") },
+                readOnly = !isEditing,
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black
+                )
+            )
 
-            Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Spacer(Modifier.height(16.dp))
 
-                // Botón Información Personal
-                Button(
-                    onClick = { mostrarPopupInfo = true },
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White),
-                    shape = RoundedCornerShape(12.dp),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                        Icon(Icons.Default.Info, null, tint = primaryColor)
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Text("Información Personal", color = Color.Black, modifier = Modifier.weight(1f))
-                        Icon(Icons.Default.ChevronRight, null, tint = Color.LightGray)
-                    }
-                }
+            OutlinedTextField(
+                value = SesionActual.correoUsuario,
+                onValueChange = { },
+                label = { Text("Correo Institucional") },
+                readOnly = true,
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.DarkGray,
+                    unfocusedTextColor = Color.DarkGray
+                )
+            )
 
-                // Botón Contacto de Emergencia
+            Spacer(Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = carrera,
+                onValueChange = { carrera = it },
+                label = { Text("Carrera") },
+                readOnly = !isEditing,
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black
+                )
+            )
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            if (isEditing) {
                 Button(
                     onClick = {
-                        tempNombreEmergencia = if (nombreEmergencia == "Sin configurar") "" else nombreEmergencia
-                        tempTelefonoEmergencia = if (telefonoEmergencia == "Sin configurar") "" else telefonoEmergencia
-                        mostrarPopupEmergencia = true
+                        isLoading = true
+                        val usuarioEditado = Usuario(
+                            id = SesionActual.idUsuario.toLong(),
+                            nombreCompleto = nombre,
+                            correoInstitucional = SesionActual.correoUsuario,
+                            carrera = carrera,
+                            foto = fotoUri
+                        )
+                        authViewModel.actualizarPerfil(usuarioEditado, {
+                            isLoading = false
+                            isEditing = false
+                            Toast.makeText(context, "Guardado correctamente", Toast.LENGTH_SHORT).show()
+                        }, {
+                            isLoading = false
+                            Toast.makeText(context, "Error: $it", Toast.LENGTH_LONG).show()
+                        })
                     },
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White),
-                    shape = RoundedCornerShape(12.dp),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp)
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = primaryColor),
+                    enabled = !isLoading
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                        Icon(Icons.Default.ContactPhone, null, tint = primaryColor)
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Contacto de Emergencia", color = Color.Black, fontSize = 14.sp)
-                            Text(text = nombreEmergencia, color = Color.Gray, fontSize = 12.sp)
-                        }
-                        Icon(Icons.Default.Edit, null, tint = Color.Gray)
-                    }
+                    if (isLoading) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                    else Text("Guardar Cambios", fontWeight = FontWeight.Bold)
                 }
-
-                // Botón Mi Vehículo (Solo si es conductor)
-                if (SesionActual.rolUsuario == "CONDUCTOR") {
-                    Button(
-                        onClick = { navController.navigate("edit_vehicle") },
-                        modifier = Modifier.fillMaxWidth().height(56.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.White),
-                        shape = RoundedCornerShape(12.dp),
-                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                            Icon(Icons.Default.DirectionsCar, null, tint = primaryColor)
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Text("Mi Vehículo", color = Color.Black, modifier = Modifier.weight(1f))
-                            Icon(Icons.Default.ChevronRight, null, tint = Color.LightGray)
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Botón Cerrar Sesión
-                Button(
+            } else {
+                OutlinedButton(
                     onClick = {
+                        SesionActual.idUsuario = 0
+                        SesionActual.nombreUsuario = ""
                         SesionActual.correoUsuario = ""
-                        SesionActual.rolUsuario = ""
-                        navController.navigate("login") { popUpTo(0) }
+                        SesionActual.carrera = ""
+                        SesionActual.fotoPerfilUrl = ""
+                        navController.navigate("login") { popUpTo(0) { inclusive = true } }
                     },
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFEBEE)),
-                    shape = RoundedCornerShape(12.dp)
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = redColor)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.ExitToApp, null, tint = Color.Red)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Cerrar Sesión", color = Color.Red, fontWeight = FontWeight.Bold)
-                    }
+                    Icon(Icons.Default.ExitToApp, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Cerrar Sesión", fontWeight = FontWeight.Bold)
                 }
             }
-        }
-
-        // DIÁLOGO INFORMACIÓN PERSONAL
-        if (mostrarPopupInfo && usuarioActual != null) {
-            AlertDialog(
-                onDismissRequest = { mostrarPopupInfo = false },
-                title = { Text("Mis Datos") },
-                text = {
-                    Column {
-                        Text("Nombre: ${usuarioActual!!.nombreCompleto}")
-                        Text("Matrícula: ${usuarioActual!!.matricula}")
-                        Text("Correo: ${usuarioActual!!.correoInstitucional}")
-                        Text("Teléfono: ${usuarioActual!!.telefono}")
-                    }
-                },
-                confirmButton = { TextButton(onClick = { mostrarPopupInfo = false }) { Text("OK") } }
-            )
-        }
-
-        // DIÁLOGO CONTACTO EMERGENCIA
-        if (mostrarPopupEmergencia) {
-            AlertDialog(
-                onDismissRequest = { mostrarPopupEmergencia = false },
-                title = { Text("Configurar Emergencia") },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = tempNombreEmergencia,
-                            onValueChange = { tempNombreEmergencia = it },
-                            label = { Text("Nombre del contacto") },
-                            singleLine = true
-                        )
-                        OutlinedTextField(
-                            value = tempTelefonoEmergencia,
-                            onValueChange = { tempTelefonoEmergencia = it },
-                            label = { Text("Teléfono") },
-                            singleLine = true
-                        )
-                    }
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            authViewModel.guardarContactoEmergencia(
-                                SesionActual.idUsuario,
-                                tempNombreEmergencia,
-                                tempTelefonoEmergencia
-                            ) {
-                                // Al guardar con éxito, actualizamos la pantalla
-                                nombreEmergencia = tempNombreEmergencia
-                                telefonoEmergencia = tempTelefonoEmergencia
-                                mostrarPopupEmergencia = false
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = primaryColor)
-                    ) { Text("Guardar") }
-                },
-                dismissButton = {
-                    TextButton(onClick = { mostrarPopupEmergencia = false }) { Text("Cancelar") }
-                }
-            )
         }
     }
 }

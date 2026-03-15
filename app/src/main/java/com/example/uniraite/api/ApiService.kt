@@ -1,55 +1,60 @@
 package com.example.uniraite.api
 
 import com.example.uniraite.models.Usuario
-import com.example.uniraite.models.Vehiculo
 import com.example.uniraite.models.Viaje
+import com.example.uniraite.models.Vehiculo
 import retrofit2.Response
 import retrofit2.http.*
 
 interface ApiService {
-    // --- USUARIOS ---
-    @POST("usuarios/registro")
+
+    @POST("usuarios/registrar")
     suspend fun registrarUsuario(@Body usuario: Usuario): Response<Usuario>
 
     @POST("usuarios/login")
-    suspend fun loginUsuario(@Body loginData: Usuario): Response<Usuario>
-
-    @PUT("usuarios/recuperar-contrasena")
-    suspend fun recuperarContrasena(
-        @Query("correo") correo: String,
-        @Query("nuevaContrasena") nuevaContrasena: String
-    ): Response<Unit>
+    suspend fun loginUsuario(@Body usuario: Usuario): Response<Usuario>
 
     @GET("usuarios/{id}")
     suspend fun obtenerPerfil(@Path("id") id: Long): Response<Usuario>
 
-    @PUT("usuarios/{id}/contacto-emergencia")
+    @PUT("usuarios/{id}")
+    suspend fun actualizarUsuario(
+        @Path("id") id: Long,
+        @Body usuario: Usuario
+    ): Response<Usuario>
+
+    @POST("usuarios/recuperar")
+    suspend fun recuperarContrasena(
+        @Query("correo") correo: String,
+        @Query("nuevaContrasena") nuevaContrasena: String
+    ): Response<Void>
+
+    @PUT("usuarios/{id}/contacto")
     suspend fun actualizarContactoEmergencia(
         @Path("id") id: Long,
-        @Query("nombreContacto") nombreContacto: String,
-        @Query("telefonoContacto") telefonoContacto: String
-    ): Response<Unit>
+        @Query("nombre") nombreContacto: String,
+        @Query("telefono") telefonoContacto: String
+    ): Response<Usuario>
 
-    // --- VIAJES ---
     @GET("viajes")
     suspend fun obtenerViajesOrdenados(): Response<List<Viaje>>
-
-    @POST("viajes")
-    suspend fun crearViaje(@Body viaje: Viaje): Response<Viaje>
-
-    @PUT("viajes/{id}")
-    suspend fun actualizarViaje(@Path("id") id: Long, @Body viaje: Viaje): Response<Viaje>
-
-    @DELETE("viajes/{id}")
-    suspend fun eliminarViaje(@Path("id") id: Long): Response<Unit>
 
     @GET("viajes/conductor/{id}")
     suspend fun obtenerViajesPorConductor(@Path("id") id: Long): Response<List<Viaje>>
 
-    // --- VEHÍCULOS ---
-    @POST("vehiculos")
-    suspend fun registrarVehiculo(@Body vehiculo: Vehiculo): Response<Vehiculo>
+    @POST("viajes")
+    suspend fun crearViaje(@Body viaje: Viaje): Response<Viaje>
+
+    // --- NUEVAS FUNCIONES CRUD PARA VIAJES ---
+    @PUT("viajes/{id}")
+    suspend fun editarViaje(@Path("id") id: Long, @Body viaje: Viaje): Response<Viaje>
+
+    @DELETE("viajes/{id}")
+    suspend fun eliminarViaje(@Path("id") id: Long): Response<Void>
 
     @GET("vehiculos/usuario/{idUsuario}")
     suspend fun obtenerVehiculoPorUsuario(@Path("idUsuario") idUsuario: Long): Response<Vehiculo>
+
+    @POST("vehiculos")
+    suspend fun registrarVehiculo(@Body vehiculo: Vehiculo): Response<Vehiculo>
 }

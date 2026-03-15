@@ -1,8 +1,11 @@
 package com.example.uniraite
 
 object SesionActual {
+    var idUsuario: Int = 0
+    var nombreUsuario: String = ""
     var correoUsuario: String = ""
     var rolUsuario: String = ""
-    var idUsuario: Int = 0
+    var carrera: String = ""
+    var fotoPerfilUrl: String = ""
     var idVehiculo: Int = 0
 }

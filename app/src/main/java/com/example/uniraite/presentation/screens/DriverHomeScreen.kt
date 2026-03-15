@@ -1,10 +1,12 @@
 package com.example.uniraite.presentation.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -12,7 +14,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -29,11 +34,10 @@ fun DriverHomeScreen(
 ) {
     val primaryGreen = Color(0xFF2E7D32)
     val backgroundGray = Color(0xFFF8F9FA)
+    val context = LocalContext.current
 
-    // CORRECCIÓN: Observamos la variable de estado segura
     val misViajes by viajesViewModel.misViajes.collectAsState()
 
-    // CORRECCIÓN: Llamamos a la API una sola vez cuando se abre la pantalla
     LaunchedEffect(Unit) {
         if (SesionActual.idUsuario != 0) {
             viajesViewModel.cargarViajesPorConductor(SesionActual.idUsuario.toLong())
@@ -49,7 +53,7 @@ fun DriverHomeScreen(
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = { navController.navigate("publish_trip") }, // Corrección de la ruta a publish_trip
+                onClick = { navController.navigate("publish_trip") },
                 containerColor = primaryGreen,
                 contentColor = Color.White,
                 icon = { Icon(Icons.Default.Add, contentDescription = null) },
@@ -101,7 +105,7 @@ fun DriverHomeScreen(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(misViajes) { viaje ->
-                        CardViajeConductor(viaje)
+                        CardViajeConductor(viaje, viajesViewModel, context)
                     }
                 }
             }
@@ -110,7 +114,83 @@ fun DriverHomeScreen(
 }
 
 @Composable
-fun CardViajeConductor(viaje: Viaje) {
+fun CardViajeConductor(viaje: Viaje, viewModel: ViajesViewModel, context: android.content.Context) {
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
+
+    var editHora by remember { mutableStateOf(viaje.horaSalida) }
+    var editAsientos by remember { mutableStateOf(viaje.asientosDisponibles.toString()) }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Cancelar Viaje", fontWeight = FontWeight.Bold, color = Color(0xFFD32F2F)) },
+            text = { Text("¿Estás seguro de que deseas cancelar este viaje?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val idViaje = viaje.id ?: 0L
+                        viewModel.eliminarViaje(idViaje, SesionActual.idUsuario.toLong()) {
+                            Toast.makeText(context, "Viaje cancelado", Toast.LENGTH_SHORT).show()
+                            showDeleteDialog = false
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F))
+                ) {
+                    Text("Eliminar", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) { Text("Atrás") }
+            }
+        )
+    }
+
+    if (showEditDialog) {
+        AlertDialog(
+            onDismissRequest = { showEditDialog = false },
+            title = { Text("Editar Viaje", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = editHora,
+                        onValueChange = { editHora = it },
+                        label = { Text("Hora de Salida") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = editAsientos,
+                        onValueChange = { editAsientos = it },
+                        label = { Text("Asientos Disponibles") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val asientosInt = editAsientos.toIntOrNull() ?: viaje.asientosDisponibles
+                        val viajeActualizado = viaje.copy(horaSalida = editHora, asientosDisponibles = asientosInt)
+                        val idViaje = viaje.id ?: 0L
+
+                        viewModel.editarViaje(idViaje, viajeActualizado) {
+                            Toast.makeText(context, "Viaje actualizado", Toast.LENGTH_SHORT).show()
+                            showEditDialog = false
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
+                ) {
+                    Text("Guardar", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditDialog = false }) { Text("Cancelar") }
+            }
+        )
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -118,9 +198,23 @@ fun CardViajeConductor(viaje: Viaje) {
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(text = "Destino: ${viaje.destino}", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color(0xFF2E7D32))
-                Text(text = "$${viaje.costo}0", fontWeight = FontWeight.ExtraBold, color = Color.Black)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // CORRECCIÓN DISEÑO: Se truncan los textos largos para que no rompan la pantalla
+                Text(
+                    text = "Destino: ${viaje.destino}",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = Color(0xFF2E7D32),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f).padding(end = 8.dp)
+                )
+                // CORRECCIÓN PRECIO: Se removió el cero extra para mostrar la cantidad correctamente
+                Text(text = "$${viaje.costo}", fontWeight = FontWeight.ExtraBold, color = Color.Black)
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -128,7 +222,13 @@ fun CardViajeConductor(viaje: Viaje) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Place, null, tint = Color.Gray, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
-                Text(text = "De: ${viaje.puntoSalida}", fontSize = 14.sp, color = Color.Gray)
+                Text(
+                    text = "De: ${viaje.puntoSalida}",
+                    fontSize = 14.sp,
+                    color = Color.Gray,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -139,10 +239,25 @@ fun CardViajeConductor(viaje: Viaje) {
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp), thickness = 0.5.dp)
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Group, null, tint = Color(0xFF2E7D32), modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(text = "Cupos: ${viaje.asientosDisponibles}", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Group, null, tint = Color(0xFF2E7D32), modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(text = "Cupos: ${viaje.asientosDisponibles}", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                }
+
+                Row {
+                    IconButton(onClick = { showEditDialog = true }) {
+                        Icon(Icons.Default.Edit, contentDescription = "Editar", tint = Color.Gray)
+                    }
+                    IconButton(onClick = { showDeleteDialog = true }) {
+                        Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = Color(0xFFD32F2F))
+                    }
+                }
             }
         }
     }
