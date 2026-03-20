@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.uniraite.models.Viaje
 import com.example.uniraite.api.ApiService
 import com.example.uniraite.api.RetrofitClient
+import com.example.uniraite.api.ReservaBackend
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -27,6 +28,9 @@ class ViajesViewModel(application: Application) : AndroidViewModel(application) 
     private val _misReservas = MutableStateFlow<List<Viaje>>(emptyList())
     val misReservas: StateFlow<List<Viaje>> = _misReservas
 
+    private val _historialReservas = MutableStateFlow<List<ReservaBackend>>(emptyList())
+    val historialReservas: StateFlow<List<ReservaBackend>> = _historialReservas
+
     init {
         cargarViajesReales()
     }
@@ -37,7 +41,6 @@ class ViajesViewModel(application: Application) : AndroidViewModel(application) 
                 val response = apiService.obtenerViajesOrdenados()
                 if (response.isSuccessful) {
                     val todosLosViajes = response.body() ?: emptyList()
-
                     val formato = SimpleDateFormat("dd/MM/yyyy hh:mm a", Locale.US)
                     val ahora = Calendar.getInstance().time
 
@@ -45,15 +48,11 @@ class ViajesViewModel(application: Application) : AndroidViewModel(application) 
                         try {
                             val fechaViaje = formato.parse(viaje.horaSalida)
                             fechaViaje?.after(ahora) == true
-                        } catch (e: Exception) {
-                            true
-                        }
+                        } catch (e: Exception) { true }
                     }
                     _viajes.value = viajesVigentes
                 }
-            } catch (e: Exception) {
-                Log.e("ViajesViewModel", "Error al cargar viajes", e)
-            }
+            } catch (e: Exception) { Log.e("ViajesViewModel", "Error al cargar viajes", e) }
         }
     }
 
@@ -64,8 +63,19 @@ class ViajesViewModel(application: Application) : AndroidViewModel(application) 
                 if (response.isSuccessful) {
                     _misViajes.value = response.body() ?: emptyList()
                 }
+            } catch (e: Exception) { Log.e("ViajesViewModel", "Error al obtener viajes del conductor", e) }
+        }
+    }
+
+    fun cargarHistorialReservas(idPasajero: Long) {
+        viewModelScope.launch {
+            try {
+                val response = apiService.obtenerReservasPorPasajero(idPasajero)
+                if (response.isSuccessful) {
+                    _historialReservas.value = response.body() ?: emptyList()
+                }
             } catch (e: Exception) {
-                Log.e("ViajesViewModel", "Error al obtener viajes del conductor", e)
+                Log.e("ViajesViewModel", "Error al cargar historial", e)
             }
         }
     }
@@ -78,40 +88,43 @@ class ViajesViewModel(application: Application) : AndroidViewModel(application) 
                     cargarViajesReales()
                     cargarViajesPorConductor(viaje.conductorId)
                     onSuccess()
-                } else {
-                    onError("Error ${response.code()}: El servidor rechazó los datos.")
-                }
-            } catch (e: Exception) {
-                onError("No se pudo conectar con el servidor.")
-            }
+                } else onError("Error ${response.code()}")
+            } catch (e: Exception) { onError("No se pudo conectar.") }
         }
     }
 
-    fun apartarLugar(idViaje: Long, idUsuario: Int, onSuccess: () -> Unit) {
+    fun apartarLugar(idViaje: Long, idUsuario: Int, onSuccess: () -> Unit, onError: (String) -> Unit = {}) {
         viewModelScope.launch {
-            val viajeReservado = _viajes.value.find { it.id == idViaje }
-            if (viajeReservado != null) {
-                val listaActual = _misReservas.value.toMutableList()
-                if (!listaActual.any { it.id == idViaje }) {
-                    listaActual.add(viajeReservado)
-                    _misReservas.value = listaActual
-                }
-            }
-            onSuccess()
+            try {
+                val nuevaReserva = ReservaBackend(viajeId = idViaje, pasajeroId = idUsuario.toLong(), estado = "CONFIRMADA")
+                val response = apiService.crearReserva(nuevaReserva)
+                if (response.isSuccessful) {
+                    cargarViajesReales()
+                    cargarHistorialReservas(idUsuario.toLong())
+                    val viajeReservado = _viajes.value.find { it.id == idViaje }
+                    if (viajeReservado != null) {
+                        val listaActual = _misReservas.value.toMutableList()
+                        if (!listaActual.any { it.id == idViaje }) {
+                            listaActual.add(viajeReservado)
+                            _misReservas.value = listaActual
+                        }
+                    }
+                    onSuccess()
+                } else onError("No se pudo realizar la reserva")
+            } catch (e: Exception) { onError("Error de conexión") }
         }
     }
 
+    // 🔥 REACTIVIDAD AL ELIMINAR: La tarjeta desaparece al instante de la pantalla
     fun eliminarViaje(idViaje: Long, idConductor: Long, onSuccess: () -> Unit) {
         viewModelScope.launch {
             try {
                 val response = apiService.eliminarViaje(idViaje)
                 if (response.isSuccessful) {
-                    // CORRECCIÓN: Borrar el viaje de las reservas activas (Tu próximo viaje) al instante
-                    _misReservas.value = _misReservas.value.filter { it.id != idViaje }
+                    // Actualiza la lista del conductor borrando el elemento
+                    _misViajes.value = _misViajes.value.filter { it.id != idViaje }
+                    // Actualiza la lista general
                     _viajes.value = _viajes.value.filter { it.id != idViaje }
-
-                    cargarViajesPorConductor(idConductor)
-                    cargarViajesReales()
                     onSuccess()
                 }
             } catch (e: Exception) {
@@ -120,17 +133,35 @@ class ViajesViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    // 🔥 REACTIVIDAD AL EDITAR: La tarjeta muestra los nuevos datos al instante
     fun editarViaje(idViaje: Long, viajeEditado: Viaje, onSuccess: () -> Unit) {
         viewModelScope.launch {
             try {
                 val response = apiService.editarViaje(idViaje, viajeEditado)
                 if (response.isSuccessful) {
-                    cargarViajesPorConductor(viajeEditado.conductorId)
-                    cargarViajesReales()
+                    // Reemplaza el viaje viejo con la nueva información en la lista del conductor
+                    _misViajes.value = _misViajes.value.map {
+                        if (it.id == idViaje) viajeEditado else it
+                    }
                     onSuccess()
                 }
             } catch (e: Exception) {
                 Log.e("ViajesViewModel", "Error al editar", e)
+            }
+        }
+    }
+
+    fun enviarCalificacion(resena: com.example.uniraite.api.Resena, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val response = apiService.enviarResena(resena)
+                if (response.isSuccessful) {
+                    onSuccess()
+                } else {
+                    onError("Ya calificaste este viaje o hubo un error.")
+                }
+            } catch (e: Exception) {
+                onError("Sin conexión al servidor.")
             }
         }
     }

@@ -27,28 +27,17 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
-
-                    // ViewModel compartido para que todas las pantallas vean los mismos datos
                     val viajesViewModelCompartido: ViajesViewModel = viewModel()
 
-                    NavHost(
-                        navController = navController,
-                        startDestination = "login"
-                    ) {
+                    NavHost(navController = navController, startDestination = "login") {
                         composable("login") { LoginScreen(navController) }
                         composable("register") { RegisterScreen(navController) }
                         composable("forgot_password") { ForgotPasswordScreen(navController) }
                         composable("role_selection") { RoleSelectionScreen(navController) }
-
-                        composable("vehicle_registration") {
-                            VehicleRegistrationScreen(navController = navController)
-                        }
-
+                        composable("vehicle_registration") { VehicleRegistrationScreen(navController) }
                         composable("driver_home") { DriverHomeScreen(navController, viajesViewModelCompartido) }
                         composable("edit_vehicle") { EditVehicleScreen(navController) }
 
-                        // 🔥 AQUÍ ESTÁ LA CORRECCIÓN 🔥
-                        // Usamos onBack y onPublishSuccess para respetar tu diseño original
                         composable("publish_trip") {
                             PublishTripScreen(
                                 onBack = { navController.popBackStack() },
@@ -59,6 +48,9 @@ class MainActivity : ComponentActivity() {
 
                         composable("home") { HomeScreen(navController, viajesViewModelCompartido) }
                         composable("search_results") { SearchResultsScreen(navController, viajesViewModelCompartido) }
+
+                        // 🔥 NUEVA RUTA: Para abrir el historial
+                        composable("my_reservations") { MyReservationsScreen(navController, viajesViewModelCompartido) }
 
                         composable(
                             route = "trip_details/{idViaje}",

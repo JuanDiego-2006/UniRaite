@@ -9,15 +9,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.material.icons.outlined.History
-import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,8 +42,22 @@ fun HomeScreen(
 
     var showPanicDialog by remember { mutableStateOf(false) }
 
-    // Observamos la lista de reservas confirmadas
-    val misReservas by viajesViewModel.misReservas.collectAsState()
+    // 🔥 CORRECCIÓN AQUÍ: Filtramos para que NO muestre viajes que ya pasaron
+    val misReservasRaw by viajesViewModel.misReservas.collectAsState()
+    val misReservas = remember(misReservasRaw) {
+        val formato = java.text.SimpleDateFormat("dd/MM/yyyy hh:mm a", java.util.Locale.US)
+        val ahora = java.util.Calendar.getInstance().time
+
+        misReservasRaw.filter { viaje ->
+            try {
+                val fechaViaje = formato.parse(viaje.horaSalida)
+                // Solo mantenemos en "Tu próximo viaje" los que son en el futuro
+                fechaViaje?.after(ahora) == true
+            } catch (e: Exception) {
+                true
+            }
+        }
+    }
 
     if (showPanicDialog) {
         AlertDialog(
@@ -220,7 +229,6 @@ fun HomeScreen(
                 SectionHeader("Tu próximo viaje")
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // AQUÍ ESTÁ LA LÓGICA DE FILTRADO
                 if (misReservas.isNotEmpty()) {
                     val proximoViaje = misReservas.first()
                     Card(
@@ -346,7 +354,8 @@ fun HomeScreen(
                         iconTint = Color(0xFF9C27B0),
                         title = "Historial",
                         subtitle = "Tus viajes anteriores",
-                        onClick = { }
+                        // 🔥 CORRECCIÓN AQUÍ: Conectamos la pantalla de reservas
+                        onClick = { navController.navigate("my_reservations") }
                     )
                     QuickActionCard(
                         modifier = Modifier.weight(1f),

@@ -1,5 +1,7 @@
 package com.example.uniraite.presentation.screens
 
+import android.content.Context
+import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -26,10 +28,28 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
 import com.example.uniraite.SesionActual
+import com.example.uniraite.PreferenciasUsuario
 import com.example.uniraite.models.Usuario
 import com.example.uniraite.presentation.viewmodels.AuthViewModel
+import java.io.File
+import java.io.FileOutputStream
+
+// ✨ TRUCO PROFESIONAL: Copiamos la foto a la carpeta privada de la app
+fun guardarImagenLocalmente(context: Context, uri: Uri): String {
+    return try {
+        val inputStream = context.contentResolver.openInputStream(uri)
+        val file = File(context.filesDir, "perfil_${System.currentTimeMillis()}.jpg")
+        val outputStream = FileOutputStream(file)
+        inputStream?.copyTo(outputStream)
+        inputStream?.close()
+        outputStream.close()
+        file.absolutePath // Devuelve una ruta permanente que nunca pierde permiso
+    } catch (e: Exception) {
+        uri.toString()
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,16 +65,15 @@ fun ProfileScreen(
     var isLoading by remember { mutableStateOf(false) }
     var showEmergencyDialog by remember { mutableStateOf(false) }
 
-    // Estados del perfil
+    val prefsUsuario = remember { PreferenciasUsuario(context) }
+
     var nombre by remember { mutableStateOf(SesionActual.nombreUsuario) }
     var carrera by remember { mutableStateOf(SesionActual.carrera) }
-    var fotoUri by remember { mutableStateOf(SesionActual.fotoPerfilUrl) }
+    var fotoUri by remember { mutableStateOf(SesionActual.fotoPerfilUrl.ifEmpty { prefsUsuario.obtenerFotoUrl() }) }
 
-    // Estados del contacto de emergencia
     var nombreEmergencia by remember { mutableStateOf("") }
     var telefonoEmergencia by remember { mutableStateOf("") }
 
-    // Al abrir la pantalla, jalamos la información desde la base de datos remota
     LaunchedEffect(Unit) {
         authViewModel.obtenerUsuarioActual(SesionActual.idUsuario.toLong()) { usuario ->
             if (usuario != null) {
@@ -64,20 +83,24 @@ fun ProfileScreen(
                 nombreEmergencia = usuario.nombreEmergencia ?: ""
                 telefonoEmergencia = usuario.telefonoEmergencia ?: ""
 
-                // Actualizamos sesión local por si acaso
                 SesionActual.nombreUsuario = usuario.nombreCompleto
                 SesionActual.carrera = usuario.carrera ?: ""
                 SesionActual.fotoPerfilUrl = usuario.foto ?: ""
+                prefsUsuario.guardarFotoUrl(usuario.foto ?: "")
             }
         }
     }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
-        onResult = { uri -> if (uri != null) fotoUri = uri.toString() }
+        onResult = { uri ->
+            if (uri != null) {
+                // 🔥 AQUÍ APLICAMOS LA MAGIA: Guardamos la ruta permanente
+                fotoUri = guardarImagenLocalmente(context, uri)
+            }
+        }
     )
 
-    // Diálogo de Contacto de Emergencia
     if (showEmergencyDialog) {
         AlertDialog(
             onDismissRequest = { showEmergencyDialog = false },
@@ -90,22 +113,14 @@ fun ProfileScreen(
                         value = nombreEmergencia,
                         onValueChange = { nombreEmergencia = it },
                         label = { Text("Nombre Completo") },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Color.Black,
-                            unfocusedTextColor = Color.Black
-                        )
+                        modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
                         value = telefonoEmergencia,
                         onValueChange = { telefonoEmergencia = it },
                         label = { Text("Teléfono") },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Color.Black,
-                            unfocusedTextColor = Color.Black
-                        )
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             },
@@ -141,7 +156,6 @@ fun ProfileScreen(
                     }
                 },
                 actions = {
-                    // Botón de Contacto de Emergencia
                     IconButton(onClick = { showEmergencyDialog = true }) {
                         Icon(Icons.Default.Warning, "Contacto de Emergencia", tint = Color.White)
                     }
@@ -169,18 +183,23 @@ fun ProfileScreen(
                 },
                 contentAlignment = Alignment.BottomEnd
             ) {
-                if (fotoUri.isNotEmpty()) {
-                    AsyncImage(
-                        model = fotoUri,
-                        contentDescription = "Foto",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize().clip(CircleShape).border(3.dp, primaryColor, CircleShape)
-                    )
-                } else {
-                    Box(modifier = Modifier.fillMaxSize().clip(CircleShape).background(Color.LightGray).border(3.dp, primaryColor, CircleShape), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Person, null, tint = Color.White, modifier = Modifier.size(60.dp))
+                SubcomposeAsyncImage(
+                    model = fotoUri.ifEmpty { null },
+                    contentDescription = "Foto",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize().clip(CircleShape).border(3.dp, primaryColor, CircleShape),
+                    loading = {
+                        Box(contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(modifier = Modifier.size(30.dp), color = primaryColor, strokeWidth = 2.dp)
+                        }
+                    },
+                    error = {
+                        Box(modifier = Modifier.fillMaxSize().background(Color.LightGray).border(3.dp, primaryColor, CircleShape), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Person, null, tint = Color.White, modifier = Modifier.size(60.dp))
+                        }
                     }
-                }
+                )
+
                 if (isEditing) {
                     Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(primaryColor).border(2.dp, Color.White, CircleShape), contentAlignment = Alignment.Center) {
                         Icon(Icons.Default.CameraAlt, null, tint = Color.White, modifier = Modifier.size(20.dp))
@@ -190,17 +209,13 @@ fun ProfileScreen(
 
             Spacer(Modifier.height(32.dp))
 
-            // Se cambia enabled = isEditing por readOnly = !isEditing para que el color no se ponga gris/invisible
             OutlinedTextField(
                 value = nombre,
                 onValueChange = { nombre = it },
                 label = { Text("Nombre Completo") },
                 readOnly = !isEditing,
                 modifier = Modifier.fillMaxWidth(),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.Black,
-                    unfocusedTextColor = Color.Black
-                )
+                colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.Black, unfocusedTextColor = Color.Black)
             )
 
             Spacer(Modifier.height(16.dp))
@@ -211,10 +226,7 @@ fun ProfileScreen(
                 label = { Text("Correo Institucional") },
                 readOnly = true,
                 modifier = Modifier.fillMaxWidth(),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.DarkGray,
-                    unfocusedTextColor = Color.DarkGray
-                )
+                colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.DarkGray, unfocusedTextColor = Color.DarkGray)
             )
 
             Spacer(Modifier.height(16.dp))
@@ -225,10 +237,7 @@ fun ProfileScreen(
                 label = { Text("Carrera") },
                 readOnly = !isEditing,
                 modifier = Modifier.fillMaxWidth(),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.Black,
-                    unfocusedTextColor = Color.Black
-                )
+                colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.Black, unfocusedTextColor = Color.Black)
             )
 
             Spacer(modifier = Modifier.weight(1f))
@@ -247,6 +256,8 @@ fun ProfileScreen(
                         authViewModel.actualizarPerfil(usuarioEditado, {
                             isLoading = false
                             isEditing = false
+                            prefsUsuario.guardarFotoUrl(fotoUri)
+                            SesionActual.fotoPerfilUrl = fotoUri
                             Toast.makeText(context, "Guardado correctamente", Toast.LENGTH_SHORT).show()
                         }, {
                             isLoading = false
@@ -268,6 +279,7 @@ fun ProfileScreen(
                         SesionActual.correoUsuario = ""
                         SesionActual.carrera = ""
                         SesionActual.fotoPerfilUrl = ""
+                        prefsUsuario.limpiarPrefs()
                         navController.navigate("login") { popUpTo(0) { inclusive = true } }
                     },
                     modifier = Modifier.fillMaxWidth().height(50.dp),

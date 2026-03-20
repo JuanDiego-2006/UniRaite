@@ -19,6 +19,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.uniraite.presentation.viewmodels.AuthViewModel
 import com.example.uniraite.SesionActual
+import com.example.uniraite.PreferenciasUsuario
 
 @Composable
 fun LoginScreen(
@@ -67,9 +68,18 @@ fun LoginScreen(
                 if (email.isNotEmpty() && password.isNotEmpty()) {
                     authViewModel.loginUsuarioCompleto(email, password) { usuario ->
                         if (usuario != null) {
-                            SesionActual.correoUsuario = email
-                            // AQUÍ ESTÁ EL ARREGLO DEL ID
+                            val prefsUsuario = PreferenciasUsuario(context)
+
+                            // GUARDAMOS EN MEMORIA
                             SesionActual.idUsuario = usuario.id?.toInt() ?: 0
+                            SesionActual.correoUsuario = email
+                            SesionActual.nombreUsuario = usuario.nombreCompleto ?: ""
+                            SesionActual.carrera = usuario.carrera ?: ""
+                            SesionActual.fotoPerfilUrl = usuario.foto ?: ""
+
+                            // GUARDAMOS EN DISCO PARA QUE NO SE BORRE AL REINICIAR
+                            prefsUsuario.guardarFotoUrl(usuario.foto ?: "")
+
                             Toast.makeText(context, "¡Bienvenido a UniRaite!", Toast.LENGTH_SHORT).show()
                             navController.navigate("role_selection") { popUpTo("login") { inclusive = true } }
                         } else {

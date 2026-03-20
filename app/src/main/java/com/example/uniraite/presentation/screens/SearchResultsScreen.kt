@@ -11,9 +11,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -104,11 +101,18 @@ fun SearchResultsScreen(
                             primaryBlue = primaryBlue,
                             cardGreen = cardGreen,
                             onReservar = {
-                                // AQUÍ conectamos el botón con la función de apartar
-                                viajesViewModel.apartarLugar(viaje.id ?: 0L, SesionActual.idUsuario) {
-                                    Toast.makeText(context, "¡Lugar reservado con éxito!", Toast.LENGTH_SHORT).show()
-                                    navController.popBackStack() // Nos regresa a la pantalla principal
-                                }
+                                // CORRECCIÓN: Se especifican claramente los parámetros onSuccess y onError
+                                viajesViewModel.apartarLugar(
+                                    idViaje = viaje.id ?: 0L,
+                                    idUsuario = SesionActual.idUsuario,
+                                    onSuccess = {
+                                        Toast.makeText(context, "¡Lugar reservado con éxito!", Toast.LENGTH_SHORT).show()
+                                        navController.popBackStack()
+                                    },
+                                    onError = { mensajeError ->
+                                        Toast.makeText(context, mensajeError, Toast.LENGTH_LONG).show()
+                                    }
+                                )
                             }
                         )
                     }
