@@ -1,15 +1,9 @@
 package org.uniraite.uniraitebacked.entities;
 
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 
 @Entity
 @Table(name = "viajes")
-@Data
-@NoArgsConstructor // Necesario para recibir JSON de Android
-@AllArgsConstructor
 public class Viaje {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -18,8 +12,6 @@ public class Viaje {
     @Column(name = "conductor_id")
     private Long conductorId;
 
-    // SOLUCIÓN AL CRASH: Agregamos este campo como Transient para que Java
-    // lo reciba sin intentar guardarlo en una columna de MySQL
     @Transient
     private String conductorNombre;
 
@@ -37,4 +29,35 @@ public class Viaje {
 
     private Double costo;
     private String estado;
+
+    // Constructor vacío necesario para Spring Boot
+    public Viaje() {}
+
+    // --- GETTERS Y SETTERS ---
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public Long getConductorId() { return conductorId; }
+    public void setConductorId(Long conductorId) { this.conductorId = conductorId; }
+
+    public String getConductorNombre() { return conductorNombre; }
+    public void setConductorNombre(String conductorNombre) { this.conductorNombre = conductorNombre; }
+
+    public String getPuntoSalida() { return puntoSalida; }
+    public void setPuntoSalida(String puntoSalida) { this.puntoSalida = puntoSalida; }
+
+    public String getDestino() { return destino; }
+    public void setDestino(String destino) { this.destino = destino; }
+
+    public String getHoraSalida() { return horaSalida; }
+    public void setHoraSalida(String horaSalida) { this.horaSalida = horaSalida; }
+
+    public Integer getAsientosDisponibles() { return asientosDisponibles; }
+    public void setAsientosDisponibles(Integer asientosDisponibles) { this.asientosDisponibles = asientosDisponibles; }
+
+    public Double getCosto() { return costo; }
+    public void setCosto(Double costo) { this.costo = costo; }
+
+    public String getEstado() { return estado; }
+    public void setEstado(String estado) { this.estado = estado; }
 }
