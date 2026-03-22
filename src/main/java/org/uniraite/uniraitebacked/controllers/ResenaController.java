@@ -15,7 +15,6 @@ public class ResenaController {
     @Autowired
     private ResenaRepository resenaRepository;
 
-    // EL POST QUE PIDE LA UNIDAD 3: Crear una reseña
     @PostMapping
     public ResponseEntity<?> crearResena(@RequestBody Resena resena) {
         // Validar que no haya calificado ya este viaje
@@ -27,9 +26,20 @@ public class ResenaController {
         return ResponseEntity.ok(nuevaResena);
     }
 
-    // GET: Obtener las reseñas de un conductor/pasajero para sacar su promedio
     @GetMapping("/evaluado/{id}")
     public List<Resena> obtenerResenasDeUsuario(@PathVariable Long id) {
         return resenaRepository.findByEvaluadoId(id);
+    }
+
+    // 🔥 LA MAGIA: Calculamos el promedio de estrellas del conductor
+    @GetMapping("/promedio/{usuarioId}")
+    public ResponseEntity<Double> obtenerPromedio(@PathVariable Long usuarioId) {
+        List<Resena> resenas = resenaRepository.findByEvaluadoId(usuarioId);
+        if (resenas.isEmpty()) {
+            return ResponseEntity.ok(0.0); // Si no tiene reseñas, tiene 0.0 estrellas (Nuevo)
+        }
+        double suma = resenas.stream().mapToDouble(Resena::getCalificacion).sum();
+        double promedio = suma / resenas.size();
+        return ResponseEntity.ok(promedio);
     }
 }

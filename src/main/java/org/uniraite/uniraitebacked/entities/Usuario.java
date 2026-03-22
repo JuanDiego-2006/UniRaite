@@ -32,6 +32,8 @@ public class Usuario {
     @Column(name = "telefono_emergencia")
     private String telefonoEmergencia;
 
+    private String fcmToken; // Esto crea la columna en MySQL automáticamente
+
     // --- GETTERS Y SETTERS ---
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -65,4 +67,11 @@ public class Usuario {
 
     public String getTelefonoEmergencia() { return telefonoEmergencia; }
     public void setTelefonoEmergencia(String telefonoEmergencia) { this.telefonoEmergencia = telefonoEmergencia; }
+
+    public void setFcmToken(String fcmToken) {
+        this.fcmToken = fcmToken;
+    }
+    public String getFcmToken() {
+        return fcmToken;
+    }
 }

@@ -73,6 +73,17 @@ public class UsuarioController {
         }).orElse(ResponseEntity.notFound().build());
     }
 
+    // Spring Boot recibirá el token automáticamente aquí
+    @PutMapping("/{id}/token")
+    public ResponseEntity<?> actualizarToken(@PathVariable Long id, @RequestParam String token) {
+        return usuarioRepository.findById(id).map(usuario -> {
+            // Ahora ya no marcará error aquí:
+            usuario.setFcmToken(token);
+            usuarioRepository.save(usuario);
+            return ResponseEntity.ok().build();
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
     // 6. RECUPERACIÓN DE CONTRASEÑA
     @PostMapping("/recuperar") // Alineado con Android (@POST "usuarios/recuperar")
     public ResponseEntity<?> recuperarContrasena(

@@ -16,7 +16,7 @@ public class ViajeController {
 
     @GetMapping
     public List<Viaje> obtenerTodos() {
-        // AQUÍ ESTÁ LA CORRECCIÓN: Ahora usa el método nuevo buscando solo los activos
+        // Usa el método nuevo buscando solo los activos
         return viajeRepository.findByEstadoOrderByHoraSalidaAsc("ACTIVO");
     }
 
@@ -38,7 +38,14 @@ public class ViajeController {
         return viajeRepository.findById(id).map(viaje -> {
             viaje.setHoraSalida(detalles.getHoraSalida());
             viaje.setAsientosDisponibles(detalles.getAsientosDisponibles());
-            viaje.setEstado(detalles.getEstado());
+
+            // 🔥 CORRECCIÓN: Si el estado viene nulo en la edición, asegúrate de mantenerlo ACTIVO
+            if (detalles.getEstado() != null) {
+                viaje.setEstado(detalles.getEstado());
+            } else {
+                viaje.setEstado("ACTIVO");
+            }
+
             return viajeRepository.save(viaje);
         }).orElseThrow(() -> new RuntimeException("Viaje no encontrado con id " + id));
     }
