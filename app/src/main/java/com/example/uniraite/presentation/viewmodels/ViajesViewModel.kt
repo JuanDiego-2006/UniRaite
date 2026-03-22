@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.uniraite.models.Viaje
+import com.example.uniraite.models.Vehiculo
 import com.example.uniraite.api.ApiService
 import com.example.uniraite.api.RetrofitClient
 import com.example.uniraite.api.ReservaBackend
@@ -31,8 +32,36 @@ class ViajesViewModel(application: Application) : AndroidViewModel(application) 
     private val _historialReservas = MutableStateFlow<List<ReservaBackend>>(emptyList())
     val historialReservas: StateFlow<List<ReservaBackend>> = _historialReservas
 
+    private val _vehiculoUsuario = MutableStateFlow<Vehiculo?>(null)
+    val vehiculoUsuario: StateFlow<Vehiculo?> = _vehiculoUsuario
+
+    // 🔥 NUEVO: Memoria temporal de los viajes que ya calificamos
+    private val _viajesCalificados = MutableStateFlow<Set<Long>>(emptySet())
+    val viajesCalificados: StateFlow<Set<Long>> = _viajesCalificados
+
     init {
         cargarViajesReales()
+    }
+
+    // 🔥 NUEVO: Función para guardar que ya calificamos este viaje
+    fun registrarViajeCalificado(idViaje: Long) {
+        _viajesCalificados.value = _viajesCalificados.value + idViaje
+    }
+
+    fun cargarVehiculoPorUsuario(idUsuario: Long) {
+        viewModelScope.launch {
+            try {
+                val response = apiService.obtenerVehiculoPorUsuario(idUsuario)
+                if (response.isSuccessful) {
+                    _vehiculoUsuario.value = response.body()
+                } else {
+                    _vehiculoUsuario.value = null
+                }
+            } catch (e: Exception) {
+                Log.e("ViajesViewModel", "Error al obtener vehiculo", e)
+                _vehiculoUsuario.value = null
+            }
+        }
     }
 
     fun cargarViajesReales() {
@@ -115,15 +144,12 @@ class ViajesViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    // 🔥 REACTIVIDAD AL ELIMINAR: La tarjeta desaparece al instante de la pantalla
     fun eliminarViaje(idViaje: Long, idConductor: Long, onSuccess: () -> Unit) {
         viewModelScope.launch {
             try {
                 val response = apiService.eliminarViaje(idViaje)
                 if (response.isSuccessful) {
-                    // Actualiza la lista del conductor borrando el elemento
                     _misViajes.value = _misViajes.value.filter { it.id != idViaje }
-                    // Actualiza la lista general
                     _viajes.value = _viajes.value.filter { it.id != idViaje }
                     onSuccess()
                 }
@@ -133,13 +159,11 @@ class ViajesViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    // 🔥 REACTIVIDAD AL EDITAR: La tarjeta muestra los nuevos datos al instante
     fun editarViaje(idViaje: Long, viajeEditado: Viaje, onSuccess: () -> Unit) {
         viewModelScope.launch {
             try {
                 val response = apiService.editarViaje(idViaje, viajeEditado)
                 if (response.isSuccessful) {
-                    // Reemplaza el viaje viejo con la nueva información en la lista del conductor
                     _misViajes.value = _misViajes.value.map {
                         if (it.id == idViaje) viajeEditado else it
                     }

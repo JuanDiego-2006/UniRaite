@@ -3,6 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("com.google.devtools.ksp") version "2.0.21-1.0.25"
+    // 🔥 Borramos las líneas repetidas de id(...) y dejamos solo la de Google:
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -62,6 +64,10 @@ dependencies {
     // Para ver los errores de red en la consola (muy útil)
     implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
     implementation("io.coil-kt:coil-compose:2.4.0")
+
+    implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
+    implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-messaging-ktx")
 
     implementation(libs.androidx.navigation.compose)
     

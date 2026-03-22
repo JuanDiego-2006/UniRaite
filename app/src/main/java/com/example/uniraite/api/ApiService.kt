@@ -5,6 +5,11 @@ import com.example.uniraite.models.Viaje
 import com.example.uniraite.models.Vehiculo
 import retrofit2.Response
 import retrofit2.http.*
+import retrofit2.http.PUT
+import retrofit2.http.Path
+import retrofit2.http.Query
+import okhttp3.ResponseBody
+
 
 data class ReservaBackend(
     val id: Long? = null,
@@ -15,7 +20,6 @@ data class ReservaBackend(
     val viaje: Viaje? = null
 )
 
-// ✨ NUEVO MODELO PARA RESEÑAS ✨
 data class Resena(
     val id: Long? = null,
     val viajeId: Long,
@@ -26,8 +30,6 @@ data class Resena(
 )
 
 interface ApiService {
-    // ... (Tus otras funciones se mantienen igual)
-
     @POST("usuarios/registrar")
     suspend fun registrarUsuario(@Body usuario: Usuario): Response<Usuario>
 
@@ -73,7 +75,16 @@ interface ApiService {
     @GET("reservas/historial/{id}")
     suspend fun obtenerReservasPorPasajero(@Path("id") id: Long): Response<List<ReservaBackend>>
 
-    // 🔥 EL POST QUE PIDE LA UNIDAD 3 🔥
     @POST("resenas")
     suspend fun enviarResena(@Body resena: Resena): Response<Resena>
+
+    // 🔥 NUEVA RUTA: Para obtener el promedio de estrellas 🔥
+    @GET("resenas/promedio/{usuarioId}")
+    suspend fun obtenerPromedioEstrellas(@Path("usuarioId") usuarioId: Long): Response<Double>
+
+    @PUT("usuarios/{id}/token")
+    suspend fun actualizarTokenFirebase(
+        @Path("id") idUsuario: Long,
+        @Query("token") token: String
+    ): Response<ResponseBody>
 }

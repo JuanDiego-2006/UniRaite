@@ -53,6 +53,7 @@ fun RoleSelectionScreen(
         // Botón Estudiante (Pasajero)
         Button(
             onClick = {
+                // 🔥 Aseguramos guardar el rol exacto
                 SesionActual.rolUsuario = "ESTUDIANTE"
                 navController.navigate("home") {
                     popUpTo("role_selection") { inclusive = true }
@@ -79,8 +80,8 @@ fun RoleSelectionScreen(
         // Botón Conductor
         Button(
             onClick = {
+                // 🔥 Aseguramos guardar el rol exacto
                 SesionActual.rolUsuario = "CONDUCTOR"
-                // AQUÍ ESTÁ LA CORRECCIÓN: Verifica si tiene vehículo antes de dejarlo pasar
                 authViewModel.verificarVehiculo(SesionActual.idUsuario) { vehiculo ->
                     if (vehiculo != null) {
                         navController.navigate("driver_home") {

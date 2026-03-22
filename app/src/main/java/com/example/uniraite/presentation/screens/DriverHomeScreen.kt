@@ -27,6 +27,7 @@ import com.example.uniraite.SesionActual
 import com.example.uniraite.models.Viaje
 import com.example.uniraite.presentation.viewmodels.AuthViewModel
 import com.example.uniraite.presentation.viewmodels.ViajesViewModel
+import com.example.uniraite.util.NotificacionesLocales // 🔥 IMPORTACIÓN AGREGADA
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -126,11 +127,9 @@ fun CardViajeConductor(viaje: Viaje, viewModel: ViajesViewModel, context: androi
     var editHora by remember { mutableStateOf(viaje.horaSalida) }
     var editAsientos by remember { mutableStateOf(viaje.asientosDisponibles.toString()) }
 
-    // 🔥 Agregamos el ViewModel de Autenticación para poder consultar el vehículo del conductor
     val authViewModel: AuthViewModel = viewModel()
     var maxAsientosVehiculo by remember { mutableIntStateOf(4) }
 
-    // Al abrir el diálogo, consultamos cuántos asientos tiene su coche en la BD
     LaunchedEffect(showEditDialog) {
         if (showEditDialog) {
             authViewModel.verificarVehiculo(SesionActual.idUsuario) { vehiculo ->
@@ -139,16 +138,13 @@ fun CardViajeConductor(viaje: Viaje, viewModel: ViajesViewModel, context: androi
         }
     }
 
-    // --- CONFIGURACIÓN DEL CALENDARIO Y RELOJ NATIVOS ---
     val calendar = Calendar.getInstance()
     val datePickerDialog = android.app.DatePickerDialog(
         context,
         { _, year, month, dayOfMonth ->
-            // Al elegir la fecha, abrimos el selector de hora
             val timePickerDialog = android.app.TimePickerDialog(
                 context,
                 { _, hourOfDay, minute ->
-                    // Juntamos fecha y hora y lo formateamos
                     val selectedCalendar = Calendar.getInstance()
                     selectedCalendar.set(year, month, dayOfMonth, hourOfDay, minute)
                     val format = SimpleDateFormat("dd/MM/yyyy hh:mm a", Locale.US)
@@ -156,7 +152,7 @@ fun CardViajeConductor(viaje: Viaje, viewModel: ViajesViewModel, context: androi
                 },
                 calendar.get(Calendar.HOUR_OF_DAY),
                 calendar.get(Calendar.MINUTE),
-                false // False para formato de 12 horas (AM/PM)
+                false
             )
             timePickerDialog.show()
         },
@@ -164,10 +160,8 @@ fun CardViajeConductor(viaje: Viaje, viewModel: ViajesViewModel, context: androi
         calendar.get(Calendar.MONTH),
         calendar.get(Calendar.DAY_OF_MONTH)
     )
-    // Evitamos que seleccionen fechas del pasado en el calendario
     datePickerDialog.datePicker.minDate = System.currentTimeMillis() - 1000
 
-    // --- DIÁLOGOS ---
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -202,7 +196,6 @@ fun CardViajeConductor(viaje: Viaje, viewModel: ViajesViewModel, context: androi
                     Text("Toca la casilla para elegir fecha y hora:", fontSize = 12.sp, color = Color.Gray)
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // ✨ CAMPO DE TEXTO CLICKEABLE PARA EL CALENDARIO ✨
                     Box(modifier = Modifier
                         .fillMaxWidth()
                         .clickable { datePickerDialog.show() }
@@ -211,7 +204,7 @@ fun CardViajeConductor(viaje: Viaje, viewModel: ViajesViewModel, context: androi
                             value = editHora,
                             onValueChange = { },
                             label = { Text("Fecha y Hora") },
-                            enabled = false, // Lo desactivamos para que no se pueda escribir a mano
+                            enabled = false,
                             leadingIcon = { Icon(Icons.Default.DateRange, contentDescription = null, tint = Color(0xFF2E7D32)) },
                             modifier = Modifier.fillMaxWidth(),
                             colors = OutlinedTextFieldDefaults.colors(
@@ -238,8 +231,6 @@ fun CardViajeConductor(viaje: Viaje, viewModel: ViajesViewModel, context: androi
                 Button(
                     onClick = {
                         val asientosInt = editAsientos.toIntOrNull() ?: viaje.asientosDisponibles
-
-                        // 🔥 VALIDACIÓN 1: ¿Es una fecha pasada? (Por si eligió mal la hora de hoy)
                         var esFechaValida = true
                         try {
                             val formato = SimpleDateFormat("dd/MM/yyyy hh:mm a", Locale.US)
@@ -250,7 +241,6 @@ fun CardViajeConductor(viaje: Viaje, viewModel: ViajesViewModel, context: androi
                             }
                         } catch (e: Exception) { esFechaValida = false }
 
-                        // 🔥 VALIDACIÓN FINAL
                         if (!esFechaValida) {
                             Toast.makeText(context, "No puedes programar un viaje al pasado", Toast.LENGTH_SHORT).show()
                         } else if (asientosInt > maxAsientosVehiculo) {
@@ -264,6 +254,13 @@ fun CardViajeConductor(viaje: Viaje, viewModel: ViajesViewModel, context: androi
                             viewModel.editarViaje(idViaje, viajeActualizado) {
                                 Toast.makeText(context, "Viaje actualizado", Toast.LENGTH_SHORT).show()
                                 showEditDialog = false
+
+                                // 🔥 AQUÍ SE DISPARA LA NOTIFICACIÓN AL EDITAR 🔥
+                                NotificacionesLocales.enviarNotificacionInmediata(
+                                    context = context,
+                                    titulo = "Viaje Actualizado ✏️",
+                                    mensaje = "Los detalles de tu viaje a ${viajeActualizado.destino} se guardaron correctamente."
+                                )
                             }
                         }
                     },
@@ -278,7 +275,6 @@ fun CardViajeConductor(viaje: Viaje, viewModel: ViajesViewModel, context: androi
         )
     }
 
-    // --- DISEÑO DE LA TARJETA (Tus diseños previos se mantienen intactos) ---
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -308,13 +304,7 @@ fun CardViajeConductor(viaje: Viaje, viewModel: ViajesViewModel, context: androi
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Place, null, tint = Color.Gray, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
-                Text(
-                    text = "De: ${viaje.puntoSalida}",
-                    fontSize = 14.sp,
-                    color = Color.Gray,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Text(text = "De: ${viaje.puntoSalida}", fontSize = 14.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {

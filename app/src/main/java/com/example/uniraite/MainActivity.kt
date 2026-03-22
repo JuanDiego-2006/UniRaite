@@ -1,6 +1,7 @@
 package com.example.uniraite
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,10 +17,26 @@ import androidx.navigation.navArgument
 import com.example.uniraite.presentation.screens.*
 import com.example.uniraite.presentation.viewmodels.ViajesViewModel
 import com.example.uniraite.ui.theme.UniRaiteTheme
+import com.google.firebase.messaging.FirebaseMessaging
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // 🔥 OBTENER EL TOKEN Y GUARDARLO EN LA SESIÓN 🔥
+        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            if (!task.isSuccessful) {
+                Log.w("FCM_UNIRAITE", "Fallo al obtener el token de Firebase", task.exception)
+                return@addOnCompleteListener
+            }
+            val token = task.result
+            SesionActual.fcmToken = token // Lo guardamos en memoria
+
+            Log.d("FCM_UNIRAITE", "========== TOKEN OBTENIDO ==========")
+            Log.d("FCM_UNIRAITE", token)
+            Log.d("FCM_UNIRAITE", "====================================")
+        }
+
         setContent {
             UniRaiteTheme {
                 Surface(
@@ -48,8 +65,6 @@ class MainActivity : ComponentActivity() {
 
                         composable("home") { HomeScreen(navController, viajesViewModelCompartido) }
                         composable("search_results") { SearchResultsScreen(navController, viajesViewModelCompartido) }
-
-                        // 🔥 NUEVA RUTA: Para abrir el historial
                         composable("my_reservations") { MyReservationsScreen(navController, viajesViewModelCompartido) }
 
                         composable(

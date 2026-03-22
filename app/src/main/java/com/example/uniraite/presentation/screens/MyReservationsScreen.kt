@@ -32,6 +32,10 @@ import com.example.uniraite.presentation.viewmodels.ViajesViewModel
 @Composable
 fun MyReservationsScreen(navController: NavController, viewModel: ViajesViewModel) {
     val reservas by viewModel.historialReservas.collectAsState()
+
+    // 🔥 NUEVO: Traemos la lista de viajes ya calificados
+    val viajesCalificados by viewModel.viajesCalificados.collectAsState()
+
     val context = LocalContext.current
 
     // Variables de estado para el sistema de reseñas
@@ -45,7 +49,7 @@ fun MyReservationsScreen(navController: NavController, viewModel: ViajesViewMode
         viewModel.cargarHistorialReservas(SesionActual.idUsuario.toLong())
     }
 
-    // --- DIÁLOGO DE CALIFICACIÓN (PUNTO 3) ---
+    // --- DIÁLOGO DE CALIFICACIÓN ---
     if (showRatingDialog && selectedReserva != null) {
         AlertDialog(
             onDismissRequest = { showRatingDialog = false },
@@ -71,7 +75,6 @@ fun MyReservationsScreen(navController: NavController, viewModel: ViajesViewMode
                     }
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Campo de texto para el comentario
                     OutlinedTextField(
                         value = comentario,
                         onValueChange = { comentario = it },
@@ -86,7 +89,6 @@ fun MyReservationsScreen(navController: NavController, viewModel: ViajesViewMode
                     onClick = {
                         val conductorId = selectedReserva!!.viaje?.conductorId ?: 0L
 
-                        // Creamos el objeto JSON para enviar a Spring Boot
                         val nuevaResena = com.example.uniraite.api.Resena(
                             viajeId = selectedReserva!!.viajeId,
                             evaluadorId = SesionActual.idUsuario.toLong(),
@@ -95,17 +97,20 @@ fun MyReservationsScreen(navController: NavController, viewModel: ViajesViewMode
                             comentario = comentario
                         )
 
-                        // Llamamos al ViewModel para enviar el POST
                         viewModel.enviarCalificacion(
                             resena = nuevaResena,
                             onSuccess = {
                                 Toast.makeText(context, "¡Gracias por calificar!", Toast.LENGTH_SHORT).show()
+                                // 🔥 LO MARCAMOS COMO CALIFICADO
+                                viewModel.registrarViajeCalificado(selectedReserva!!.viajeId)
                                 showRatingDialog = false
                                 comentario = ""
                                 rating = 5
                             },
                             onError = { error ->
                                 Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+                                // 🔥 LO MARCAMOS TAMBIÉN SI EL SERVIDOR DICE QUE YA ESTABA CALIFICADO
+                                viewModel.registrarViajeCalificado(selectedReserva!!.viajeId)
                                 showRatingDialog = false
                             }
                         )
@@ -153,6 +158,9 @@ fun MyReservationsScreen(navController: NavController, viewModel: ViajesViewMode
                     items(reservas) { reserva ->
                         val viaje = reserva.viaje
 
+                        // 🔥 VERIFICAMOS SI ESTE VIAJE YA FUE CALIFICADO
+                        val yaEstaCalificado = viajesCalificados.contains(reserva.viajeId)
+
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(16.dp),
@@ -166,7 +174,6 @@ fun MyReservationsScreen(navController: NavController, viewModel: ViajesViewMode
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    // Etiqueta de Estado
                                     Surface(
                                         color = if (reserva.estado == "CONFIRMADA") Color(0xFFE8F5E9) else Color(0xFFFFF3E0),
                                         shape = RoundedCornerShape(6.dp)
@@ -180,7 +187,6 @@ fun MyReservationsScreen(navController: NavController, viewModel: ViajesViewMode
                                         )
                                     }
 
-                                    // Costo
                                     if (viaje != null) {
                                         Text(text = "$${viaje.costo}0", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = Color(0xFF00A669))
                                     }
@@ -189,7 +195,6 @@ fun MyReservationsScreen(navController: NavController, viewModel: ViajesViewMode
                                 Spacer(modifier = Modifier.height(16.dp))
 
                                 if (viaje != null) {
-                                    // Ruta: Origen a Destino
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color(0xFF1565C0), modifier = Modifier.size(20.dp))
                                         Spacer(Modifier.width(8.dp))
@@ -203,7 +208,6 @@ fun MyReservationsScreen(navController: NavController, viewModel: ViajesViewMode
 
                                     Spacer(modifier = Modifier.height(8.dp))
 
-                                    // Fecha y Hora
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(Icons.Default.AccessTime, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(20.dp))
                                         Spacer(Modifier.width(8.dp))
@@ -212,22 +216,41 @@ fun MyReservationsScreen(navController: NavController, viewModel: ViajesViewMode
 
                                     Spacer(modifier = Modifier.height(16.dp))
 
-                                    // 🔥 BOTÓN DEL PUNTO 3: CALIFICAR VIAJE
+                                    // 🔥 BOTÓN INTELIGENTE: Cambia si ya está calificado
                                     Button(
                                         onClick = {
-                                            selectedReserva = reserva
-                                            rating = 5 // Reseteamos a 5 estrellas
-                                            comentario = ""
-                                            showRatingDialog = true
+                                            if (yaEstaCalificado) {
+                                                // Si ya está calificado, no abre la ventana, solo muestra el aviso
+                                                Toast.makeText(context, "Ya calificaste este viaje", Toast.LENGTH_SHORT).show()
+                                            } else {
+                                                // Si no, abre la ventana normalmente
+                                                selectedReserva = reserva
+                                                rating = 5
+                                                comentario = ""
+                                                showRatingDialog = true
+                                            }
                                         },
                                         modifier = Modifier.fillMaxWidth(),
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFF8E1)),
-                                        border = BorderStroke(1.dp, Color(0xFFFFECB3)),
+                                        // Cambiamos el color a gris si ya se calificó
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = if (yaEstaCalificado) Color(0xFFF5F5F5) else Color(0xFFFFF8E1)
+                                        ),
+                                        border = BorderStroke(1.dp, if (yaEstaCalificado) Color(0xFFE0E0E0) else Color(0xFFFFECB3)),
                                         shape = RoundedCornerShape(8.dp)
                                     ) {
-                                        Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFB300), modifier = Modifier.size(18.dp))
+                                        Icon(
+                                            Icons.Default.Star,
+                                            contentDescription = null,
+                                            tint = if (yaEstaCalificado) Color.Gray else Color(0xFFFFB300),
+                                            modifier = Modifier.size(18.dp)
+                                        )
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Calificar Conductor", color = Color(0xFFF57F17), fontWeight = FontWeight.Bold)
+                                        Text(
+                                            // Cambiamos el texto si ya se calificó
+                                            text = if (yaEstaCalificado) "Viaje Calificado" else "Calificar Conductor",
+                                            color = if (yaEstaCalificado) Color.Gray else Color(0xFFF57F17),
+                                            fontWeight = FontWeight.Bold
+                                        )
                                     }
                                 } else {
                                     Text("Detalles del viaje no disponibles", color = Color.Gray, fontSize = 14.sp)

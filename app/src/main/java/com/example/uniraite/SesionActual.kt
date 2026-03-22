@@ -7,5 +7,7 @@ object SesionActual {
     var rolUsuario: String = ""
     var carrera: String = ""
     var fotoPerfilUrl: String = ""
-    var idVehiculo: Int = 0
+
+    // 🔥 NUEVA VARIABLE PARA GUARDAR EL TOKEN DE FIREBASE 🔥
+    var fcmToken: String = ""
 }

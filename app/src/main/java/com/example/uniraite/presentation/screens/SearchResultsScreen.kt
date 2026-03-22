@@ -24,6 +24,7 @@ import androidx.navigation.NavController
 import com.example.uniraite.SesionActual
 import com.example.uniraite.models.Viaje
 import com.example.uniraite.presentation.viewmodels.ViajesViewModel
+import com.example.uniraite.util.NotificacionesLocales
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -101,12 +102,26 @@ fun SearchResultsScreen(
                             primaryBlue = primaryBlue,
                             cardGreen = cardGreen,
                             onReservar = {
-                                // CORRECCIÓN: Se especifican claramente los parámetros onSuccess y onError
                                 viajesViewModel.apartarLugar(
                                     idViaje = viaje.id ?: 0L,
                                     idUsuario = SesionActual.idUsuario,
                                     onSuccess = {
                                         Toast.makeText(context, "¡Lugar reservado con éxito!", Toast.LENGTH_SHORT).show()
+
+                                        // 🔥 1. Notificación inmediata de confirmación
+                                        NotificacionesLocales.enviarNotificacionInmediata(
+                                            context = context,
+                                            titulo = "¡Lugar Apartado! 🚗",
+                                            mensaje = "Confirmaste tu lugar para ir a ${viaje.destino}. Revisa tus reservas para más detalles."
+                                        )
+
+                                        // 🔥 2. PROGRAMAMOS LA ALARMA PARA EL FUTURO (15 minutos antes)
+                                        NotificacionesLocales.programarAlerta15MinutosAntes(
+                                            context = context,
+                                            fechaHoraString = viaje.horaSalida,
+                                            destino = viaje.destino
+                                        )
+
                                         navController.popBackStack()
                                     },
                                     onError = { mensajeError ->

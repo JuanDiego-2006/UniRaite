@@ -82,6 +82,13 @@ fun LoginScreen(
 
                             Toast.makeText(context, "¡Bienvenido a UniRaite!", Toast.LENGTH_SHORT).show()
                             navController.navigate("role_selection") { popUpTo("login") { inclusive = true } }
+                            // ... después de validar el login con éxito:
+                            if (SesionActual.fcmToken.isNotEmpty()) {
+                                authViewModel.guardarTokenEnServidor(
+                                    idUsuario = SesionActual.idUsuario.toLong(),
+                                    token = SesionActual.fcmToken
+                                )
+                            }
                         } else {
                             Toast.makeText(context, "Correo o contraseña incorrectos", Toast.LENGTH_LONG).show()
                         }

@@ -30,6 +30,7 @@ import com.example.uniraite.SesionActual
 import com.example.uniraite.models.Viaje
 import com.example.uniraite.presentation.viewmodels.AuthViewModel
 import com.example.uniraite.presentation.viewmodels.ViajesViewModel
+import com.example.uniraite.util.NotificacionesLocales // 🔥 IMPORTACIÓN AGREGADA
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -152,7 +153,6 @@ fun PublishTripScreen(
                     val cuposNum = cupos.toIntOrNull() ?: 1
                     val costoNum = costo.toDoubleOrNull() ?: 0.0
 
-                    // VALIDACIÓN DE HORA
                     var fechaValida = true
                     if (fecha.isNotBlank() && hora.isNotBlank()) {
                         try {
@@ -162,9 +162,7 @@ fun PublishTripScreen(
                             if (fechaSeleccionada != null && fechaSeleccionada.before(ahora)) {
                                 fechaValida = false
                             }
-                        } catch (e: Exception) {
-                            // Ignorar error de parseo temporalmente
-                        }
+                        } catch (e: Exception) { }
                     }
 
                     if (puntoDeSalida.isBlank() || destino.isBlank() || fecha.isBlank() || hora.isBlank()) {
@@ -173,14 +171,10 @@ fun PublishTripScreen(
                         Toast.makeText(context, "No puedes publicar un viaje en el pasado", Toast.LENGTH_LONG).show()
                     } else if (SesionActual.idUsuario == 0) {
                         Toast.makeText(context, "Error: Inicia sesión de nuevo", Toast.LENGTH_LONG).show()
-
-                        // --- AQUÍ ESTÁ LA LÓGICA CORREGIDA QUE PEDISTE ---
                     } else if (cuposNum > maxCupos) {
                         Toast.makeText(context, "Tu vehículo solo tiene capacidad para $maxCupos pasajeros", Toast.LENGTH_LONG).show()
                     } else if (cuposNum <= 0) {
                         Toast.makeText(context, "Debe haber al menos 1 asiento disponible", Toast.LENGTH_SHORT).show()
-                        // --------------------------------------------------
-
                     } else {
                         val viajeNube = Viaje(
                             puntoSalida = puntoDeSalida,
@@ -196,6 +190,14 @@ fun PublishTripScreen(
                             viaje = viajeNube,
                             onSuccess = {
                                 Toast.makeText(context, "¡Viaje publicado!", Toast.LENGTH_SHORT).show()
+
+                                // 🔥 AQUÍ SE DISPARA LA NOTIFICACIÓN AL PUBLICAR 🔥
+                                NotificacionesLocales.enviarNotificacionInmediata(
+                                    context = context,
+                                    titulo = "Ruta Creada 📍",
+                                    mensaje = "Tu viaje hacia ${viajeNube.destino} está visible para los pasajeros."
+                                )
+
                                 onPublishSuccess()
                             },
                             onError = { error ->

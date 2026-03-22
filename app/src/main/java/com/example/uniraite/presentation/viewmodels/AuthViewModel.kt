@@ -144,4 +144,29 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+
+    fun actualizarTokenFirebase(idUsuario: Long, token: String) {
+        viewModelScope.launch {
+            try {
+                // Llamamos al endpoint que creamos en el controlador de Spring Boot
+                apiService.actualizarTokenFirebase(idUsuario, token)
+                Log.d("FCM_UNIRAITE", "Token guardado en el servidor con éxito")
+            } catch (e: Exception) {
+                Log.e("FCM_UNIRAITE", "Error al mandar el token al servidor", e)
+            }
+        }
+    }
+
+    fun guardarTokenEnServidor(idUsuario: Long, token: String) {
+        viewModelScope.launch {
+            try {
+                val apiService = RetrofitClient.retrofit.create(ApiService::class.java)
+                // Llamada al @PUT que creamos arriba
+                apiService.actualizarTokenFirebase(idUsuario, token)
+                Log.d("FCM_UNIRAITE", "¡EXITO! Token guardado en MySQL")
+            } catch (e: Exception) {
+                Log.e("FCM_UNIRAITE", "ERROR: No se pudo conectar con Spring Boot", e)
+            }
+        }
+    }
 }

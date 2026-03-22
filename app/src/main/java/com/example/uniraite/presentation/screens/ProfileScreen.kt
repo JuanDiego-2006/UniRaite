@@ -33,10 +33,12 @@ import com.example.uniraite.SesionActual
 import com.example.uniraite.PreferenciasUsuario
 import com.example.uniraite.models.Usuario
 import com.example.uniraite.presentation.viewmodels.AuthViewModel
+import com.example.uniraite.api.ApiService
+import com.example.uniraite.api.RetrofitClient
 import java.io.File
 import java.io.FileOutputStream
+import java.util.Locale
 
-// ✨ TRUCO PROFESIONAL: Copiamos la foto a la carpeta privada de la app
 fun guardarImagenLocalmente(context: Context, uri: Uri): String {
     return try {
         val inputStream = context.contentResolver.openInputStream(uri)
@@ -45,7 +47,7 @@ fun guardarImagenLocalmente(context: Context, uri: Uri): String {
         inputStream?.copyTo(outputStream)
         inputStream?.close()
         outputStream.close()
-        file.absolutePath // Devuelve una ruta permanente que nunca pierde permiso
+        file.absolutePath
     } catch (e: Exception) {
         uri.toString()
     }
@@ -74,6 +76,11 @@ fun ProfileScreen(
     var nombreEmergencia by remember { mutableStateOf("") }
     var telefonoEmergencia by remember { mutableStateOf("") }
 
+    var promedioEstrellas by remember { mutableDoubleStateOf(0.0) }
+
+    // 🔥 Capturamos el rol exacto al entrar a la pantalla 🔥
+    val rolActivo = remember { SesionActual.rolUsuario }
+
     LaunchedEffect(Unit) {
         authViewModel.obtenerUsuarioActual(SesionActual.idUsuario.toLong()) { usuario ->
             if (usuario != null) {
@@ -89,13 +96,20 @@ fun ProfileScreen(
                 prefsUsuario.guardarFotoUrl(usuario.foto ?: "")
             }
         }
+
+        try {
+            val apiService = RetrofitClient.retrofit.create(ApiService::class.java)
+            val estrellasResponse = apiService.obtenerPromedioEstrellas(SesionActual.idUsuario.toLong())
+            if (estrellasResponse.isSuccessful) {
+                promedioEstrellas = estrellasResponse.body() ?: 0.0
+            }
+        } catch (e: Exception) { }
     }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
         onResult = { uri ->
             if (uri != null) {
-                // 🔥 AQUÍ APLICAMOS LA MAGIA: Guardamos la ruta permanente
                 fotoUri = guardarImagenLocalmente(context, uri)
             }
         }
@@ -207,7 +221,45 @@ fun ProfileScreen(
                 }
             }
 
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(16.dp))
+
+            // 🔥 LÓGICA BLINDADA: Leemos la variable 'rolActivo' que capturamos al inicio 🔥
+            if (rolActivo == "CONDUCTOR") {
+                if (promedioEstrellas > 0) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFB300), modifier = Modifier.size(28.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = String.format(Locale.US, "%.1f", promedioEstrellas),
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.DarkGray
+                        )
+                    }
+                } else {
+                    Surface(color = Color(0xFFE8F5E9), shape = RoundedCornerShape(12.dp)) {
+                        Text(
+                            "Conductor Nuevo",
+                            color = Color(0xFF2E7D32),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            } else {
+                Surface(color = Color(0xFFE3F2FD), shape = RoundedCornerShape(12.dp)) {
+                    Text(
+                        text = "Estudiante UPChiapas",
+                        color = Color(0xFF1565C0),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(24.dp))
 
             OutlinedTextField(
                 value = nombre,
@@ -277,6 +329,7 @@ fun ProfileScreen(
                         SesionActual.idUsuario = 0
                         SesionActual.nombreUsuario = ""
                         SesionActual.correoUsuario = ""
+                        SesionActual.rolUsuario = ""
                         SesionActual.carrera = ""
                         SesionActual.fotoPerfilUrl = ""
                         prefsUsuario.limpiarPrefs()
