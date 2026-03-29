@@ -27,7 +27,6 @@ import com.example.uniraite.SesionActual
 import com.example.uniraite.models.Viaje
 import com.example.uniraite.presentation.viewmodels.AuthViewModel
 import com.example.uniraite.presentation.viewmodels.ViajesViewModel
-import com.example.uniraite.util.NotificacionesLocales // 🔥 IMPORTACIÓN AGREGADA
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -254,13 +253,6 @@ fun CardViajeConductor(viaje: Viaje, viewModel: ViajesViewModel, context: androi
                             viewModel.editarViaje(idViaje, viajeActualizado) {
                                 Toast.makeText(context, "Viaje actualizado", Toast.LENGTH_SHORT).show()
                                 showEditDialog = false
-
-                                // 🔥 AQUÍ SE DISPARA LA NOTIFICACIÓN AL EDITAR 🔥
-                                NotificacionesLocales.enviarNotificacionInmediata(
-                                    context = context,
-                                    titulo = "Viaje Actualizado ✏️",
-                                    mensaje = "Los detalles de tu viaje a ${viajeActualizado.destino} se guardaron correctamente."
-                                )
                             }
                         }
                     },

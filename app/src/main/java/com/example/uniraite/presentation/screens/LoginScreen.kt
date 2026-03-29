@@ -1,5 +1,6 @@
 package com.example.uniraite.presentation.screens
 
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -20,6 +21,9 @@ import androidx.navigation.NavController
 import com.example.uniraite.presentation.viewmodels.AuthViewModel
 import com.example.uniraite.SesionActual
 import com.example.uniraite.PreferenciasUsuario
+import com.example.uniraite.api.RetrofitClient
+import com.google.firebase.messaging.FirebaseMessaging
+import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
@@ -29,6 +33,9 @@ fun LoginScreen(
     val context = LocalContext.current
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+
+    // 🔥 SCOPE PARA ENVIAR EL TOKEN EN SEGUNDO PLANO
+    val scope = rememberCoroutineScope()
 
     val PrimaryGreen = Color(0xFF006400)
     val BackgroundColor = Color(0xFFF0F2F5)
@@ -70,25 +77,41 @@ fun LoginScreen(
                         if (usuario != null) {
                             val prefsUsuario = PreferenciasUsuario(context)
 
-                            // GUARDAMOS EN MEMORIA
+                            // 1. GUARDAMOS EN MEMORIA
                             SesionActual.idUsuario = usuario.id?.toInt() ?: 0
                             SesionActual.correoUsuario = email
                             SesionActual.nombreUsuario = usuario.nombreCompleto ?: ""
                             SesionActual.carrera = usuario.carrera ?: ""
                             SesionActual.fotoPerfilUrl = usuario.foto ?: ""
 
-                            // GUARDAMOS EN DISCO PARA QUE NO SE BORRE AL REINICIAR
+                            // 2. GUARDAMOS EN DISCO PARA QUE NO SE BORRE AL REINICIAR
                             prefsUsuario.guardarFotoUrl(usuario.foto ?: "")
 
                             Toast.makeText(context, "¡Bienvenido a UniRaite!", Toast.LENGTH_SHORT).show()
-                            navController.navigate("role_selection") { popUpTo("login") { inclusive = true } }
-                            // ... después de validar el login con éxito:
-                            if (SesionActual.fcmToken.isNotEmpty()) {
-                                authViewModel.guardarTokenEnServidor(
-                                    idUsuario = SesionActual.idUsuario.toLong(),
-                                    token = SesionActual.fcmToken
-                                )
+
+                            // 🔥 3. AUTOMATIZACIÓN DEL TOKEN FCM HACIA SPRING BOOT 🔥
+                            FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                                if (task.isSuccessful) {
+                                    val tokenGenerado = task.result
+                                    SesionActual.fcmToken = tokenGenerado // Opcional: guardarlo localmente
+
+                                    // Usamos la corrutina para llamar a Retrofit
+                                    scope.launch {
+                                        try {
+                                            RetrofitClient.apiService.actualizarTokenFirebase(
+                                                idUsuario = SesionActual.idUsuario.toLong(),
+                                                token = tokenGenerado
+                                            )
+                                            Log.d("FCM_UNIRAITE", "✅ Token sincronizado exitosamente con Spring Boot")
+                                        } catch (e: Exception) {
+                                            Log.e("FCM_UNIRAITE", "❌ Error al enviar el token al servidor: ${e.message}")
+                                        }
+                                    }
+                                }
                             }
+
+                            // 4. NAVEGAMOS A LA SIGUIENTE PANTALLA
+                            navController.navigate("role_selection") { popUpTo("login") { inclusive = true } }
                         } else {
                             Toast.makeText(context, "Correo o contraseña incorrectos", Toast.LENGTH_LONG).show()
                         }

@@ -17,7 +17,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -30,7 +29,6 @@ import com.example.uniraite.SesionActual
 import com.example.uniraite.models.Viaje
 import com.example.uniraite.presentation.viewmodels.AuthViewModel
 import com.example.uniraite.presentation.viewmodels.ViajesViewModel
-import com.example.uniraite.util.NotificacionesLocales // 🔥 IMPORTACIÓN AGREGADA
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -189,15 +187,9 @@ fun PublishTripScreen(
                         viajesViewModel.publicarNuevoViaje(
                             viaje = viajeNube,
                             onSuccess = {
-                                Toast.makeText(context, "¡Viaje publicado!", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "¡Viaje publicado en el servidor!", Toast.LENGTH_SHORT).show()
 
-                                // 🔥 AQUÍ SE DISPARA LA NOTIFICACIÓN AL PUBLICAR 🔥
-                                NotificacionesLocales.enviarNotificacionInmediata(
-                                    context = context,
-                                    titulo = "Ruta Creada 📍",
-                                    mensaje = "Tu viaje hacia ${viajeNube.destino} está visible para los pasajeros."
-                                )
-
+                                // 🔥 AHORA LA NOTIFICACIÓN LA MANDA SPRING BOOT DE FORMA REMOTA 🔥
                                 onPublishSuccess()
                             },
                             onError = { error ->

@@ -87,4 +87,11 @@ interface ApiService {
         @Path("id") idUsuario: Long,
         @Query("token") token: String
     ): Response<ResponseBody>
+
+    @FormUrlEncoded
+    @POST("api/usuarios/actualizar-token")
+    suspend fun actualizarTokenFCM(
+        @Field("usuarioId") usuarioId: Long,
+        @Field("fcmToken") fcmToken: String
+    ): Response<Void>
 }
