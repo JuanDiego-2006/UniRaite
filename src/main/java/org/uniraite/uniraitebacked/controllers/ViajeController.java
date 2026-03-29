@@ -1,8 +1,13 @@
 package org.uniraite.uniraitebacked.controllers;
 
+import org.uniraite.uniraitebacked.entities.Reserva;
 import org.uniraite.uniraitebacked.entities.Viaje;
+import org.uniraite.uniraitebacked.repositories.ReservaRepository;
+import org.uniraite.uniraitebacked.repositories.UsuarioRepository;
 import org.uniraite.uniraitebacked.repositories.ViajeRepository;
+import org.uniraite.uniraitebacked.services.FcmService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -14,9 +19,17 @@ public class ViajeController {
     @Autowired
     private ViajeRepository viajeRepository;
 
+    @Autowired
+    private ReservaRepository reservaRepository; // Para buscar a los pasajeros
+
+    @Autowired
+    private UsuarioRepository usuarioRepository; // Para buscar los Tokens
+
+    @Autowired
+    private FcmService fcmService; // Tu motor de Firebase
+
     @GetMapping
     public List<Viaje> obtenerTodos() {
-        // Usa el método nuevo buscando solo los activos
         return viajeRepository.findByEstadoOrderByHoraSalidaAsc("ACTIVO");
     }
 
@@ -25,12 +38,24 @@ public class ViajeController {
         return viajeRepository.findByConductorId(id);
     }
 
+    // 1. CREAR VIAJE Y MANDAR NOTIFICACIÓN REMOTA AL CONDUCTOR
     @PostMapping
     public Viaje crear(@RequestBody Viaje viaje) {
         if (viaje.getEstado() == null) {
             viaje.setEstado("ACTIVO");
         }
-        return viajeRepository.save(viaje);
+        Viaje viajeGuardado = viajeRepository.save(viaje);
+
+        // 🔥 SPRING BOOT LE AVISA A FIREBASE QUE Mande LA NOTIFICACIÓN 🔥
+        usuarioRepository.findById(viajeGuardado.getConductorId()).ifPresent(conductor -> {
+            fcmService.enviarNotificacionPush(
+                    conductor.getFcmToken(),
+                    "Ruta Creada 📍",
+                    "Tu viaje hacia " + viajeGuardado.getDestino() + " está visible para todos desde el servidor."
+            );
+        });
+
+        return viajeGuardado;
     }
 
     @PutMapping("/{id}")
@@ -39,7 +64,6 @@ public class ViajeController {
             viaje.setHoraSalida(detalles.getHoraSalida());
             viaje.setAsientosDisponibles(detalles.getAsientosDisponibles());
 
-            // 🔥 CORRECCIÓN: Si el estado viene nulo en la edición, asegúrate de mantenerlo ACTIVO
             if (detalles.getEstado() != null) {
                 viaje.setEstado(detalles.getEstado());
             } else {
@@ -53,5 +77,28 @@ public class ViajeController {
     @DeleteMapping("/{id}")
     public void eliminar(@PathVariable Long id) {
         viajeRepository.deleteById(id);
+    }
+
+    // 2. NUEVO ENDPOINT: INICIAR VIAJE Y AVISAR A LOS PASAJEROS
+    @PostMapping("/{id}/iniciar")
+    public ResponseEntity<?> iniciarViaje(@PathVariable Long id) {
+        return viajeRepository.findById(id).map(viaje -> {
+            viaje.setEstado("EN_PROGRESO");
+            viajeRepository.save(viaje);
+
+            // Buscar a todos los alumnos que reservaron este viaje
+            List<Reserva> reservas = reservaRepository.findByViajeId(id);
+            for (Reserva r : reservas) {
+                usuarioRepository.findById(r.getPasajeroId()).ifPresent(pasajero -> {
+                    // Manda notificación push a cada pasajero
+                    fcmService.enviarNotificacionPush(
+                            pasajero.getFcmToken(),
+                            "¡Tu viaje ha iniciado! 🚗",
+                            "El conductor va en camino al punto de salida (" + viaje.getPuntoSalida() + ")."
+                    );
+                });
+            }
+            return ResponseEntity.ok().build();
+        }).orElse(ResponseEntity.notFound().build());
     }
 }

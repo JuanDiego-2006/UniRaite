@@ -11,4 +11,7 @@ public interface ViajeRepository extends JpaRepository<Viaje, Long> {
 
     // Busca los viajes de un conductor específico
     List<Viaje> findByConductorId(Long conductorId);
+
+    // En ViajeRepository.java
+    List<Viaje> findByHoraSalidaAndEstado(String horaSalida, String estado);
 }

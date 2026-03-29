@@ -16,7 +16,7 @@ public class UsuarioController {
     private UsuarioRepository usuarioRepository;
 
     // 1. REGISTRO
-    @PostMapping("/registrar") // Alineado con Android (@POST "usuarios/registrar")
+    @PostMapping("/registrar")
     public ResponseEntity<?> registrar(@RequestBody Usuario usuario) {
         if (usuarioRepository.findByCorreoInstitucional(usuario.getCorreoInstitucional()).isPresent()) {
             return ResponseEntity.badRequest().body("El correo ya está registrado");
@@ -48,7 +48,7 @@ public class UsuarioController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // 4. ACTUALIZAR PERFIL (¡ESTE ES EL QUE FALTABA Y DABA ERROR 405!)
+    // 4. ACTUALIZAR PERFIL
     @PutMapping("/{id}")
     public ResponseEntity<Usuario> actualizarPerfil(@PathVariable Long id, @RequestBody Usuario detallesUsuario) {
         return usuarioRepository.findById(id).map(usuario -> {
@@ -60,11 +60,11 @@ public class UsuarioController {
     }
 
     // 5. ACTUALIZAR CONTACTO DE EMERGENCIA
-    @PutMapping("/{id}/contacto") // Alineado con Android (@PUT "usuarios/{id}/contacto")
+    @PutMapping("/{id}/contacto")
     public ResponseEntity<Usuario> actualizarContactoEmergencia(
             @PathVariable Long id,
-            @RequestParam("nombre") String nombre,     // Alineado con @Query("nombre") de Android
-            @RequestParam("telefono") String telefono) { // Alineado con @Query("telefono") de Android
+            @RequestParam("nombre") String nombre,
+            @RequestParam("telefono") String telefono) {
 
         return usuarioRepository.findById(id).map(usuario -> {
             usuario.setNombreEmergencia(nombre);
@@ -73,19 +73,8 @@ public class UsuarioController {
         }).orElse(ResponseEntity.notFound().build());
     }
 
-    // Spring Boot recibirá el token automáticamente aquí
-    @PutMapping("/{id}/token")
-    public ResponseEntity<?> actualizarToken(@PathVariable Long id, @RequestParam String token) {
-        return usuarioRepository.findById(id).map(usuario -> {
-            // Ahora ya no marcará error aquí:
-            usuario.setFcmToken(token);
-            usuarioRepository.save(usuario);
-            return ResponseEntity.ok().build();
-        }).orElse(ResponseEntity.notFound().build());
-    }
-
     // 6. RECUPERACIÓN DE CONTRASEÑA
-    @PostMapping("/recuperar") // Alineado con Android (@POST "usuarios/recuperar")
+    @PostMapping("/recuperar")
     public ResponseEntity<?> recuperarContrasena(
             @RequestParam("correo") String correo,
             @RequestParam("nuevaContrasena") String nuevaContrasena) {
@@ -99,5 +88,15 @@ public class UsuarioController {
         } else {
             return ResponseEntity.status(404).body("Usuario no encontrado");
         }
+    }
+
+    // GUARDAR TOKEN FCM (CORREGIDO)
+    @PostMapping("/actualizar-token")
+    public void guardarTokenFCM(@RequestParam Long usuarioId, @RequestParam String fcmToken) {
+        usuarioRepository.findById(usuarioId).ifPresent(usuario -> {
+            usuario.setFcmToken(fcmToken);
+            usuarioRepository.save(usuario);
+            System.out.println("✅ Token FCM actualizado para el usuario: " + usuario.getCorreoInstitucional());
+        });
     }
 }
