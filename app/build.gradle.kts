@@ -74,6 +74,11 @@ dependencies {
     // LIBRERÍA PARA IMÁGENES:
     implementation(libs.coil.compose)
 
+    // Librería de OpenStreetMap
+    implementation("org.osmdroid:osmdroid-android:6.1.18")
+
+    implementation("androidx.preference:preference-ktx:1.2.1")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
