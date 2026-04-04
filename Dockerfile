@@ -7,6 +7,7 @@ RUN mvn clean package -DskipTests
 # Fase de ejecución
 FROM openjdk:17-jdk-slim
 WORKDIR /app
+# El asterisco ayuda a encontrar el archivo sin importar el nombre exacto
 COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
