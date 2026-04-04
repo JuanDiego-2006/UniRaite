@@ -9,7 +9,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/reservas")
@@ -29,14 +32,21 @@ public class ReservaController {
 
     @GetMapping("/historial/{pasajeroId}")
     public List<Reserva> obtenerHistorial(@PathVariable Long pasajeroId) {
-        List<Reserva> reservas = reservaRepository.findByPasajeroId(pasajeroId);
-        List<Reserva> reservasCompletas = new ArrayList<>();
+        List<Reserva> reservas = reservaRepository.findByPasajeroIdOrderByIdDesc(pasajeroId);
+        // Una fila por (pasajero + viaje): quedarse con la reserva más reciente (id mayor).
+        Map<Long, Reserva> unaPorViaje = new LinkedHashMap<>();
+        for (Reserva r : reservas) {
+            unaPorViaje.putIfAbsent(r.getViajeId(), r);
+        }
+        List<Reserva> sinDuplicar = new ArrayList<>(unaPorViaje.values());
+        sinDuplicar.sort((a, b) -> Long.compare(
+                b.getId() != null ? b.getId() : 0L,
+                a.getId() != null ? a.getId() : 0L));
 
-        for (Reserva reserva : reservas) {
-            viajeRepository.findById(reserva.getViajeId()).ifPresent(viaje -> {
-                reserva.setViaje(viaje);
-                reservasCompletas.add(reserva);
-            });
+        List<Reserva> reservasCompletas = new ArrayList<>();
+        for (Reserva reserva : sinDuplicar) {
+            viajeRepository.findById(reserva.getViajeId()).ifPresent(reserva::setViaje);
+            reservasCompletas.add(reserva);
         }
         return reservasCompletas;
     }
@@ -45,6 +55,17 @@ public class ReservaController {
     public Reserva crearReserva(@RequestBody Reserva reserva) {
         if (reserva.getEstado() == null) {
             reserva.setEstado("CONFIRMADA");
+        }
+
+        // Idempotente: misma reserva (pasajero + viaje) no crea otra fila ni vuelve a descontar cupos
+        if (reserva.getViajeId() != null && reserva.getPasajeroId() != null) {
+            Optional<Reserva> ya = reservaRepository.findFirstByViajeIdAndPasajeroIdOrderByIdDesc(
+                    reserva.getViajeId(), reserva.getPasajeroId());
+            if (ya.isPresent()) {
+                Reserva e = ya.get();
+                viajeRepository.findById(e.getViajeId()).ifPresent(e::setViaje);
+                return e;
+            }
         }
 
         // 1. Guardar y descontar asiento

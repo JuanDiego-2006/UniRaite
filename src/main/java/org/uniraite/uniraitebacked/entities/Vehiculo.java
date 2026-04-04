@@ -21,6 +21,15 @@ public class Vehiculo {
     @Column(name = "conductor_id")
     private Long usuarioId;
 
+    /** Foto del vehículo (placas/modelo) en JPEG codificado Base64 para identificación del pasajero */
+    @Lob
+    @Column(name = "foto_base64", columnDefinition = "LONGTEXT")
+    private String fotoBase64;
+
+    @Lob
+    @Column(name = "foto_placas_base64", columnDefinition = "LONGTEXT")
+    private String fotoPlacasBase64;
+
     public Vehiculo() {}
 
     // --- GETTERS Y SETTERS ---
@@ -47,4 +56,10 @@ public class Vehiculo {
 
     public Long getUsuarioId() { return usuarioId; }
     public void setUsuarioId(Long usuarioId) { this.usuarioId = usuarioId; }
+
+    public String getFotoBase64() { return fotoBase64; }
+    public void setFotoBase64(String fotoBase64) { this.fotoBase64 = fotoBase64; }
+
+    public String getFotoPlacasBase64() { return fotoPlacasBase64; }
+    public void setFotoPlacasBase64(String fotoPlacasBase64) { this.fotoPlacasBase64 = fotoPlacasBase64; }
 }

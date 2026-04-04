@@ -30,6 +30,18 @@ public class Viaje {
     private Double costo;
     private String estado;
 
+    @Column(name = "latitud_salida")
+    private Double latitudSalida;
+
+    @Column(name = "longitud_salida")
+    private Double longitudSalida;
+
+    @Column(name = "latitud_destino")
+    private Double latitudDestino;
+
+    @Column(name = "longitud_destino")
+    private Double longitudDestino;
+
     // Constructor vacío necesario para Spring Boot
     public Viaje() {}
 
@@ -60,4 +72,16 @@ public class Viaje {
 
     public String getEstado() { return estado; }
     public void setEstado(String estado) { this.estado = estado; }
+
+    public Double getLatitudSalida() { return latitudSalida; }
+    public void setLatitudSalida(Double latitudSalida) { this.latitudSalida = latitudSalida; }
+
+    public Double getLongitudSalida() { return longitudSalida; }
+    public void setLongitudSalida(Double longitudSalida) { this.longitudSalida = longitudSalida; }
+
+    public Double getLatitudDestino() { return latitudDestino; }
+    public void setLatitudDestino(Double latitudDestino) { this.latitudDestino = latitudDestino; }
+
+    public Double getLongitudDestino() { return longitudDestino; }
+    public void setLongitudDestino(Double longitudDestino) { this.longitudDestino = longitudDestino; }
 }

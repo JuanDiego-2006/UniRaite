@@ -33,6 +33,13 @@ public class ViajeController {
         return viajeRepository.findByEstadoOrderByHoraSalidaAsc("ACTIVO");
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<Viaje> obtenerPorId(@PathVariable Long id) {
+        return viajeRepository.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     @GetMapping("/conductor/{id}")
     public List<Viaje> obtenerViajesPorConductor(@PathVariable Long id) {
         return viajeRepository.findByConductorId(id);
@@ -61,8 +68,25 @@ public class ViajeController {
     @PutMapping("/{id}")
     public Viaje actualizar(@PathVariable Long id, @RequestBody Viaje detalles) {
         return viajeRepository.findById(id).map(viaje -> {
-            viaje.setHoraSalida(detalles.getHoraSalida());
-            viaje.setAsientosDisponibles(detalles.getAsientosDisponibles());
+            if (detalles.getPuntoSalida() != null) {
+                viaje.setPuntoSalida(detalles.getPuntoSalida());
+            }
+            if (detalles.getDestino() != null) {
+                viaje.setDestino(detalles.getDestino());
+            }
+            if (detalles.getHoraSalida() != null) {
+                viaje.setHoraSalida(detalles.getHoraSalida());
+            }
+            if (detalles.getAsientosDisponibles() != null) {
+                viaje.setAsientosDisponibles(detalles.getAsientosDisponibles());
+            }
+            if (detalles.getCosto() != null) {
+                viaje.setCosto(detalles.getCosto());
+            }
+            viaje.setLatitudSalida(detalles.getLatitudSalida());
+            viaje.setLongitudSalida(detalles.getLongitudSalida());
+            viaje.setLatitudDestino(detalles.getLatitudDestino());
+            viaje.setLongitudDestino(detalles.getLongitudDestino());
 
             if (detalles.getEstado() != null) {
                 viaje.setEstado(detalles.getEstado());
