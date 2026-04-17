@@ -6,6 +6,7 @@ import org.uniraite.uniraitebacked.repositories.UsuarioRepository;
 import org.uniraite.uniraitebacked.repositories.ViajeRepository;
 import org.uniraite.uniraitebacked.services.FcmService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -97,5 +98,30 @@ public class ReservaController {
         });
 
         return reservaRepository.save(reserva);
+    }
+
+    /**
+     * Cancela la reserva del pasajero en el viaje: elimina la fila y devuelve un asiento al viaje (cupos +1).
+     */
+    @DeleteMapping("/viaje/{viajeId}/pasajero/{pasajeroId}")
+    public ResponseEntity<Void> cancelarReserva(
+            @PathVariable Long viajeId,
+            @PathVariable Long pasajeroId) {
+        Optional<Reserva> opt = reservaRepository.findFirstByViajeIdAndPasajeroIdOrderByIdDesc(viajeId, pasajeroId);
+        if (opt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        Reserva r = opt.get();
+        if (r.getEstado() != null && "CANCELADA".equalsIgnoreCase(r.getEstado())) {
+            return ResponseEntity.badRequest().build();
+        }
+        Long rid = r.getId();
+        reservaRepository.deleteById(rid);
+        viajeRepository.findById(viajeId).ifPresent(viaje -> {
+            int actuales = viaje.getAsientosDisponibles() != null ? viaje.getAsientosDisponibles() : 0;
+            viaje.setAsientosDisponibles(actuales + 1);
+            viajeRepository.save(viaje);
+        });
+        return ResponseEntity.noContent().build();
     }
 }
